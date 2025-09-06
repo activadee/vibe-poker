@@ -37,11 +37,15 @@
 
     <div class="participants">
       <h3>Participants</h3>
+      <div class="progress-pill" *ngIf="voteTotal() > 0">
+        {{ voteCount() }}/{{ voteTotal() }} voted
+      </div>
       <ul>
         @for (p of participants(); track p.id) {
           <li>
             <span class="name">{{ p.name }}</span>
             <span class="role">{{ p.role }}</span>
+            <span class="badge voted" *ngIf="hasVoted(p)">Voted</span>
             <span class="vote" *ngIf="revealed(); else hiddenVote">{{ votes()[p.id] ?? '—' }}</span>
             <ng-template #hiddenVote>
               <span class="vote muted">—</span>

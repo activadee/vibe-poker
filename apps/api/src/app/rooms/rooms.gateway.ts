@@ -19,6 +19,7 @@ import type {
   VoteResetPayload,
   StorySetPayload,
   DeckSetPayload,
+  VoteProgressEvent,
 } from '@scrum-poker/shared-types';
 
 @Injectable()
@@ -61,6 +62,29 @@ export class RoomsGateway implements OnGatewayDisconnect {
 
   private isPlayer(p?: Participant) {
     return p?.role === 'player' || p?.role === 'host';
+  }
+
+  private safeRoom(room: Room): Room {
+    // Hide votes before reveal to avoid leaking values
+    if (!room.revealed) {
+      const { votes: _omitted, ...rest } = room as any;
+      return rest as Room;
+    }
+    return room;
+  }
+
+  private computeProgress(room: Room): VoteProgressEvent {
+    const eligible = room.participants.filter((p) => this.isPlayer(p));
+    const total = eligible.length;
+    const votedIds = Object.keys(room.votes ?? {}).filter((id) =>
+      eligible.some((p) => p.id === id)
+    );
+    return { count: votedIds.length, total, votedIds };
+  }
+
+  private broadcastProgress(roomId: string, room: Room) {
+    const progress = this.computeProgress(room);
+    this.server.to(this.roomKey(roomId)).emit('vote:progress', progress);
   }
 
   @SubscribeMessage('room:join')
@@ -106,7 +130,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     this.logEvent({ event: 'room_join', room_id: roomId, name, socket_id: client.id });
 
     // Broadcast state to all in room (including the joiner)
-    this.server.to(this.roomKey(roomId)).emit('room:state', updated);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(updated));
+    this.broadcastProgress(roomId, updated);
   }
 
   handleDisconnect(client: Socket) {
@@ -123,7 +148,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
       this.rooms.addParticipant(roomId, { id: 'host', name: hostName, role: 'host' });
     }
     this.logEvent({ event: 'room_leave', room_id: roomId, socket_id: client.id });
-    this.server.to(this.roomKey(roomId)).emit('room:state', room);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
+    this.broadcastProgress(roomId, room);
   }
 
   @SubscribeMessage('vote:cast')
@@ -146,7 +172,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     const votes = room.votes ?? (room.votes = {});
     votes[client.id] = value;
     this.logEvent({ event: 'vote_cast', room_id: roomId, socket_id: client.id });
-    // Do not broadcast votes before reveal to keep them secret.
+    // Broadcast progress only (no values) to all clients
+    this.broadcastProgress(roomId, room);
   }
 
   @SubscribeMessage('vote:reveal')
@@ -165,7 +192,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     }
     room.revealed = true;
     this.logEvent({ event: 'vote_reveal', room_id: roomId, socket_id: client.id });
-    this.server.to(this.roomKey(roomId)).emit('room:state', room);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
+    this.broadcastProgress(roomId, room);
   }
 
   @SubscribeMessage('vote:reset')
@@ -185,7 +213,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     room.revealed = false;
     room.votes = {};
     this.logEvent({ event: 'vote_reset', room_id: roomId, socket_id: client.id });
-    this.server.to(this.roomKey(roomId)).emit('room:state', room);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
+    this.broadcastProgress(roomId, room);
   }
 
   @SubscribeMessage('story:set')
@@ -205,7 +234,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     const story = (payload?.story ?? '').trim();
     room.story = story;
     this.logEvent({ event: 'story_set', room_id: roomId, socket_id: client.id });
-    this.server.to(this.roomKey(roomId)).emit('room:state', room);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
+    this.broadcastProgress(roomId, room);
   }
 
   @SubscribeMessage('deck:set')
@@ -227,6 +257,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     // Reset votes when deck changes
     room.votes = {};
     this.logEvent({ event: 'deck_set', room_id: roomId, socket_id: client.id, deck: deckId });
-    this.server.to(this.roomKey(roomId)).emit('room:state', room);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
+    this.broadcastProgress(roomId, room);
   }
 }

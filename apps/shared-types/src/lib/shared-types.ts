@@ -60,3 +60,13 @@ export interface StorySetPayload {
 export interface DeckSetPayload {
   deckId: 'fibonacci' | 'tshirt' | string;
 }
+
+// FR-006: Vote progress event (no values leaked)
+export interface VoteProgressEvent {
+  // number of participants who have cast a vote (players + host only)
+  count: number;
+  // total number of eligible voters in the room (players + host)
+  total: number;
+  // ids of participants who have voted (socket ids); used for UI badges
+  votedIds: string[];
+}

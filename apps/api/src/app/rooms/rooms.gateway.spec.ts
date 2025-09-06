@@ -6,6 +6,7 @@ import type { Room } from '@scrum-poker/shared-types';
 describe('RoomsGateway', () => {
   let gateway: RoomsGateway;
   let rooms: jest.Mocked<RoomsService>;
+  let toEmit: jest.Mock;
 
   const makeRoom = (id = 'ABCD-1234'): Room => ({
     id,
@@ -33,7 +34,7 @@ describe('RoomsGateway', () => {
     rooms = moduleRef.get(RoomsService) as jest.Mocked<RoomsService>;
 
     // Inject a mock Socket.IO server into the gateway
-    const toEmit = jest.fn();
+    toEmit = jest.fn();
     const to = jest.fn(() => ({ emit: toEmit }));
     // @ts-expect-error assigning test double
     gateway.server = { to };
@@ -56,9 +57,10 @@ describe('RoomsGateway', () => {
       role: 'player',
     });
     const toMock = (gateway as any).server.to as jest.Mock;
-    const toEmit = toMock.mock.results[0].value.emit as jest.Mock;
     expect(toMock).toHaveBeenCalledWith('room:ROOM1');
     expect(toEmit).toHaveBeenCalledWith('room:state', updated);
+    // Also emits vote progress with 0 of 1
+    expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 1, votedIds: [] });
   });
 
   it('handleJoin emits error when room missing', () => {
@@ -179,5 +181,56 @@ describe('RoomsGateway', () => {
     );
     const toMock = (gateway as any).server.to as jest.Mock;
     expect(toMock).not.toHaveBeenCalledWith('room:ROOMX');
+  });
+
+  it('broadcasts vote progress on cast without leaking room:state', () => {
+    const room = makeRoom('ROOM1');
+    room.participants = [
+      { id: 'p1', name: 'Alice', role: 'player' },
+      { id: 'obs', name: 'Olivia', role: 'observer' },
+    ];
+    rooms.get.mockReturnValue(room);
+
+    // Map socket to room
+    (gateway as any).socketRoom.set('p1', 'ROOM1');
+    const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
+
+    gateway.handleVoteCast({ value: '5' } as any, client);
+
+    // Should broadcast only progress with 1/1 (only players counted)
+    expect(toEmit).toHaveBeenCalledWith('vote:progress', {
+      count: 1,
+      total: 1,
+      votedIds: ['p1'],
+    });
+    // No room:state emitted on cast
+    expect(toEmit.mock.calls.some((c: any[]) => c[0] === 'room:state')).toBe(false);
+  });
+
+  it('room:state omits votes before reveal and includes after reveal', () => {
+    const room = makeRoom('ROOMZ');
+    room.participants = [
+      { id: 'h1', name: 'Hannah', role: 'host' },
+      { id: 'p1', name: 'Alice', role: 'player' },
+    ];
+    room.votes = { p1: '5', h1: '8' } as any;
+    room.revealed = false;
+    rooms.get.mockReturnValue(room);
+
+    // Map socket to room as host
+    (gateway as any).socketRoom.set('h1', 'ROOMZ');
+    const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
+
+    // Trigger a state broadcast via story:set (host-only)
+    gateway.handleStorySet({ story: 'XYZ' } as any, host);
+    const stateBefore = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
+    expect(stateBefore).toBeDefined();
+    expect('votes' in stateBefore).toBe(false);
+
+    // Now reveal and expect votes to be present
+    gateway.handleVoteReveal({} as any, host);
+    const stateAfter = toEmit.mock.calls.filter((c: any[]) => c[0] === 'room:state').pop()?.[1];
+    expect(stateAfter).toBeDefined();
+    expect(stateAfter.votes).toEqual(room.votes);
   });
 });

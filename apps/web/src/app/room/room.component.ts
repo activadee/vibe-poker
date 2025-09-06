@@ -2,7 +2,7 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import type { Room, RoomErrorEvent } from '@scrum-poker/shared-types';
+import type { Room, RoomErrorEvent, VoteProgressEvent, Participant } from '@scrum-poker/shared-types';
 import { io, Socket } from 'socket.io-client';
 
 @Component({
@@ -29,6 +29,10 @@ export class RoomComponent implements OnDestroy {
   deckId = signal<'fibonacci' | string>('fibonacci');
   readonly deck = ['0', '1', '2', '3', '5', '8', '13', '20', '40', '100', '?'];
   votes = signal<Record<string, string>>({});
+  // FR-006 progress state
+  voteCount = signal(0);
+  voteTotal = signal(0);
+  votedIds = signal<string[]>([]);
 
   private socket?: Socket;
   private socketId = signal<string>('');
@@ -102,6 +106,13 @@ export class RoomComponent implements OnDestroy {
       this.votes.set(room.votes ?? {});
       this.joined.set(true);
     });
+    // FR-006: vote progress stream
+    socket.on('vote:progress', (p: VoteProgressEvent | undefined) => {
+      const progress = p ?? { count: 0, total: 0, votedIds: [] };
+      this.voteCount.set(progress.count ?? 0);
+      this.voteTotal.set(progress.total ?? 0);
+      this.votedIds.set(progress.votedIds ?? []);
+    });
   }
 
   join() {
@@ -144,5 +155,12 @@ export class RoomComponent implements OnDestroy {
   resetVotes() {
     const socket = this.connect();
     socket.emit('vote:reset', {});
+  }
+
+  // UI helper for templates
+  hasVoted(p: Participant): boolean {
+    if (this.revealed()) return false;
+    const ids = this.votedIds();
+    return !!ids && ids.includes(p.id);
   }
 }

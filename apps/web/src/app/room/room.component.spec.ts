@@ -40,4 +40,33 @@ describe('RoomComponent', () => {
     expect(comp.error()).toBe('');
     expect(navigateByUrlSpy).toHaveBeenCalledWith('/');
   });
+
+  it('updates progress and voted badges on vote:progress', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    // Seed participants
+    comp.participants.set([
+      { id: 'p1', name: 'Alice', role: 'player' },
+      { id: 'p2', name: 'Bob', role: 'player' },
+    ]);
+
+    // Fake socket to register listeners
+    const handlers: Record<string, (arg?: unknown) => void> = {};
+    const fakeSocket = { on: (evt: string, cb: (arg?: unknown) => void) => { handlers[evt] = cb; } } as any;
+    // Access private method in test context
+    (comp as any).setupSocketListeners(fakeSocket);
+
+    // Emit progress
+    handlers['vote:progress']?.({ count: 1, total: 2, votedIds: ['p1'] });
+
+    expect(comp.voteCount()).toBe(1);
+    expect(comp.voteTotal()).toBe(2);
+    expect(comp.hasVoted({ id: 'p1', name: 'Alice', role: 'player' })).toBe(true);
+    expect(comp.hasVoted({ id: 'p2', name: 'Bob', role: 'player' })).toBe(false);
+
+    // After reveal, badges should hide
+    comp.revealed.set(true);
+    expect(comp.hasVoted({ id: 'p1', name: 'Alice', role: 'player' })).toBe(false);
+  });
 });
