@@ -17,7 +17,13 @@ describe('RoomComponent', () => {
       providers: [
         { provide: Router, useValue: { navigateByUrl: navigateByUrlSpy, createUrlTree: jest.fn(() => ({})), serializeUrl: jest.fn(() => '/'), events: { subscribe: () => ({ unsubscribe: () => undefined }) } } },
         // Minimal ActivatedRoute stub
-        { provide: ActivatedRoute, useValue: { paramMap: paramMap$.asObservable() } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: paramMap$.asObservable(),
+            snapshot: { queryParamMap: convertToParamMap({}) },
+          },
+        },
       ],
     });
   });
@@ -36,7 +42,7 @@ describe('RoomComponent', () => {
     expect(btn?.textContent).toContain('Join Room');
   });
 
-  it('deep-link with saved name auto-calls join()', () => {
+  it('deep-link with saved name does not auto-join', () => {
     jest.useFakeTimers();
     localStorage.setItem('displayName', 'Eve');
     paramMap$.next(convertToParamMap({ roomId: 'ROOM2' }));
@@ -45,9 +51,9 @@ describe('RoomComponent', () => {
     const comp = fixture.componentInstance as any;
     const joinSpy = jest.spyOn(comp, 'join').mockImplementation(() => undefined);
 
-    // Flush the scheduled join
+    // Flush any scheduled tasks
     jest.runOnlyPendingTimers();
-    expect(joinSpy).toHaveBeenCalled();
+    expect(joinSpy).not.toHaveBeenCalled();
     jest.useRealTimers();
   });
 
@@ -185,6 +191,8 @@ describe('RoomComponent', () => {
     comp.join();
 
     expect(fakeSocket.emit).toHaveBeenCalledWith('room:join', expect.objectContaining({ roomId: 'ROOM1', name: 'Olivia', role: 'observer' }));
+
+  });
 
   it('seeds story editor models and emits story:set on save', () => {
     const fixture = TestBed.createComponent(RoomComponent);
