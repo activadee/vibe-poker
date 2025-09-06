@@ -15,11 +15,59 @@ describe('RoomComponent', () => {
     TestBed.configureTestingModule({
       imports: [RoomComponent],
       providers: [
-        { provide: Router, useValue: { navigateByUrl: navigateByUrlSpy } },
+        { provide: Router, useValue: { navigateByUrl: navigateByUrlSpy, createUrlTree: jest.fn(() => ({})), serializeUrl: jest.fn(() => '/'), events: { subscribe: () => ({ unsubscribe: () => undefined }) } } },
         // Minimal ActivatedRoute stub
         { provide: ActivatedRoute, useValue: { paramMap: paramMap$.asObservable() } },
       ],
     });
+  });
+
+  it('deep-link without saved name shows join prompt', () => {
+    // Ensure no saved name
+    localStorage.removeItem('displayName');
+    paramMap$.next(convertToParamMap({ roomId: 'ROOM1' }));
+
+    const fixture = TestBed.createComponent(RoomComponent);
+    fixture.detectChanges();
+
+    const joinSection = fixture.nativeElement.querySelector('.join');
+    expect(joinSection).toBeTruthy();
+    const btn: HTMLButtonElement = joinSection.querySelector('button');
+    expect(btn?.textContent).toContain('Join Room');
+  });
+
+  it('deep-link with saved name auto-calls join()', () => {
+    jest.useFakeTimers();
+    localStorage.setItem('displayName', 'Eve');
+    paramMap$.next(convertToParamMap({ roomId: 'ROOM2' }));
+
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+    const joinSpy = jest.spyOn(comp, 'join').mockImplementation(() => undefined);
+
+    // Flush the scheduled join
+    jest.runOnlyPendingTimers();
+    expect(joinSpy).toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  it('shows invalid room error and CTA when room:error received', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    // Register socket listeners on a fake socket
+    const handlers: Record<string, (arg?: any) => void> = {};
+    const fakeSocket = { on: (evt: string, cb: (arg?: any) => void) => { handlers[evt] = cb; } } as any;
+    (comp as any).setupSocketListeners(fakeSocket);
+
+    // Simulate server reporting invalid room
+    handlers['room:error']?.({ code: 'invalid_room', message: 'This room does not exist or has expired.' });
+    fixture.detectChanges();
+
+    const errorEl: HTMLElement = fixture.nativeElement.querySelector('.error');
+    expect(errorEl?.textContent).toContain('This room does not exist or has expired.');
+    const cta: HTMLAnchorElement = errorEl.querySelector('a.btn');
+    expect(cta?.textContent).toContain('Create a new room');
   });
 
   it('leave disconnects socket, clears state and navigates home', () => {
