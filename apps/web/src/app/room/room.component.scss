@@ -26,6 +26,12 @@
   border: none;
 }
 
+.btn.secondary {
+  background: transparent;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
 .link {
   display: flex;
   gap: 8px;
@@ -42,6 +48,12 @@ code {
 
 .copied {
   color: #2e7d32;
+}
+
+.room-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 8px 0 16px;
 }
 
 .participants ul {

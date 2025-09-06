@@ -21,6 +21,9 @@
   }
 
   @if (joined()) {
+    <div class="room-actions">
+      <button class="btn secondary" (click)="leave()">Leave Room</button>
+    </div>
     <div class="share">
       <p>Share this link with your team:</p>
       <div class="link">

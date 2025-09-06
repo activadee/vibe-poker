@@ -83,6 +83,14 @@ export class RoomComponent implements OnDestroy {
     socket.emit('room:join', { roomId: this.roomId(), name });
   }
 
+  leave() {
+    this.disconnect();
+    this.joined.set(false);
+    this.participants.set([]);
+    this.error.set('');
+    this.router.navigateByUrl('/');
+  }
+
   async copyLink() {
     await navigator.clipboard.writeText(this.url);
     this.copied.set(true);
