@@ -1,0 +1,23 @@
+.room {
+  max-width: 720px;
+  margin: 32px auto;
+}
+
+.link {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+code {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  max-width: 80%;
+}
+
+.copied {
+  color: #2e7d32;
+}
+

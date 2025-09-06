@@ -1,0 +1,11 @@
+<div class="room">
+  <h2>Room {{ roomId() }}</h2>
+  <p>Share this link with your team:</p>
+  <div class="link">
+    <code>{{ url }}</code>
+    <button (click)="copyLink()">Copy Link</button>
+  </div>
+  @if(copied()) {
+  <p class="copied">Link copied!</p>
+  }
+</div>

@@ -1,0 +1,14 @@
+<div class="lobby">
+  <h1>Vibe Kanban</h1>
+  <p>Enter your display name to create a room.</p>
+  <form (ngSubmit)="createRoom()">
+    <input
+      name="displayName"
+      placeholder="Your name"
+      [(ngModel)]="name"
+      required
+    />
+    <button type="submit" [disabled]="loading()">Create Room</button>
+  </form>
+  <p class="error" *ngIf="error()">{{ error() }}</p>
+</div>
