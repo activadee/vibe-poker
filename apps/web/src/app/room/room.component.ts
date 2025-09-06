@@ -2,7 +2,7 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import type { Room, RoomErrorEvent, VoteProgressEvent, Participant, VoteStats } from '@scrum-poker/shared-types';
+import type { Room, RoomErrorEvent, VoteProgressEvent, Participant, VoteStats, RoomJoinPayload } from '@scrum-poker/shared-types';
 import { io, Socket } from 'socket.io-client';
 import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
 
@@ -131,8 +131,13 @@ export class RoomComponent implements OnDestroy {
     this.error.set('');
     localStorage.setItem('displayName', name);
     const socket = this.connect();
-    const payload: any = { roomId: this.roomId(), name };
-    if (this.joinAsObserver) payload.role = 'observer';
+    let payload: RoomJoinPayload = {
+      roomId: this.roomId(),
+      name,
+    };
+    if (this.joinAsObserver) {
+      payload = { ...payload, role: 'observer' };
+    }
     socket.emit('room:join', payload);
   }
 

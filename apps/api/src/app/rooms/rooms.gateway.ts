@@ -67,15 +67,15 @@ export class RoomsGateway implements OnGatewayDisconnect {
   private safeRoom(room: Room): Room {
     // Hide votes before reveal to avoid leaking values
     if (!room.revealed) {
-      const { votes: _omitted, stats: _stats_omitted, ...rest } = room as any;
-      return rest as Room;
+      const { votes: _omitted, stats: _stats_omitted, ...rest } = room;
+      return rest;
     }
     // When revealed, compute and attach stats derived from numeric votes
     const stats = this.rooms.computeStats(room);
     if (stats) {
-      (room as any).stats = stats;
+      room.stats = stats;
     } else {
-      delete (room as any).stats;
+      delete room.stats;
     }
     return room;
   }
