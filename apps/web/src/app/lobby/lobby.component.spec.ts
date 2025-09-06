@@ -34,4 +34,41 @@ describe('LobbyComponent', () => {
 
     expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ABCD-1234']);
   });
+
+  it('renders initial state (snapshot)', () => {
+    const fixture = TestBed.createComponent(LobbyComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement).toMatchSnapshot();
+  });
+
+  it('enables Join when room code present', () => {
+    const fixture = TestBed.createComponent(LobbyComponent);
+    const comp = fixture.componentInstance;
+    fixture.detectChanges();
+    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('section:nth-of-type(2) button');
+    expect(btn.disabled).toBe(true);
+    comp.roomCode = 'ABCD-1234';
+    fixture.detectChanges();
+    expect(btn.disabled).toBe(false);
+  });
+
+  it('validates name length for Create (3–30)', () => {
+    const fixture = TestBed.createComponent(LobbyComponent);
+    const comp = fixture.componentInstance;
+    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('section:first-of-type button');
+    comp.name = 'Al';
+    fixture.detectChanges();
+    expect(btn.disabled).toBe(true);
+    comp.name = 'Alice';
+    fixture.detectChanges();
+    expect(btn.disabled).toBe(false);
+  });
+
+  it('parses link and navigates on join', () => {
+    const fixture = TestBed.createComponent(LobbyComponent);
+    const comp = fixture.componentInstance;
+    comp.roomCode = 'https://example.com/r/ZZZZ-9999?utm=1';
+    comp.joinRoom();
+    expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ZZZZ-9999']);
+  });
 });

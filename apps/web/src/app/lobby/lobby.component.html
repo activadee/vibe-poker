@@ -1,14 +1,47 @@
 <div class="lobby">
   <h1>Vibe Kanban</h1>
-  <p>Enter your display name to create a room.</p>
-  <form (ngSubmit)="createRoom()">
-    <input
-      name="displayName"
-      placeholder="Your name"
-      [(ngModel)]="name"
-      required
-    />
-    <button type="submit" [disabled]="loading()">Create Room</button>
-  </form>
-  <p class="error" *ngIf="error()">{{ error() }}</p>
+
+  <section aria-labelledby="create-title">
+    <h2 id="create-title">Create a room</h2>
+    <p>Enter your display name to start a new room.</p>
+    <form (ngSubmit)="createRoom()" autocomplete="on">
+      <label for="displayName">Display Name</label>
+      <input
+        id="displayName"
+        name="displayName"
+        placeholder="e.g. Alice"
+        [(ngModel)]="name"
+        minlength="3"
+        maxlength="30"
+        required
+        autocomplete="name"
+        aria-describedby="nameHelp"
+      />
+      <small id="nameHelp" class="muted">3–30 characters</small>
+      <div class="actions">
+        <button type="submit" [disabled]="loading() || !nameValid()">Create Room</button>
+      </div>
+    </form>
+  </section>
+
+  <section aria-labelledby="join-title">
+    <h2 id="join-title">Join a room</h2>
+    <p>Paste a room code or full link to join.</p>
+    <form (ngSubmit)="joinRoom()">
+      <label for="roomCode">Room Code or Link</label>
+      <input
+        id="roomCode"
+        name="roomCode"
+        placeholder="ABCD-1234 or https://…/r/ABCD-1234"
+        [(ngModel)]="roomCode"
+        aria-describedby="roomHelp"
+      />
+      <small id="roomHelp" class="muted">Join is enabled when code is present</small>
+      <div class="actions">
+        <button type="submit" [disabled]="!canJoin()">Join Room</button>
+      </div>
+    </form>
+  </section>
+
+  <p class="error" *ngIf="error()" role="alert">{{ error() }}</p>
 </div>

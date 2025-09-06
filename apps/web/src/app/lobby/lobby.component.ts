@@ -18,13 +18,22 @@ export class LobbyComponent {
   private readonly router = inject(Router);
 
   name = '';
+  roomCode = '';
   loading = signal(false);
   error = signal('');
 
+  nameValid() {
+    const v = (this.name || '').trim();
+    return v.length >= 3 && v.length <= 30;
+  }
+  canJoin() {
+    return (this.roomCode || '').trim().length > 0;
+  }
+
   async createRoom() {
     const hostName = this.name.trim();
-    if (!hostName) {
-      this.error.set('Please enter your display name');
+    if (!this.nameValid()) {
+      this.error.set('Display name must be 3–30 characters');
       return;
     }
     this.error.set('');
@@ -49,5 +58,35 @@ export class LobbyComponent {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  joinRoom() {
+    const input = (this.roomCode || '').trim();
+    if (!input) return;
+    // Save name if valid (non-blocking for join per AC)
+    const hostName = (this.name || '').trim();
+    if (hostName.length >= 3 && hostName.length <= 30) {
+      try { localStorage.setItem('displayName', hostName); } catch (err) { console.warn('localStorage unavailable', err); }
+    }
+    const roomId = LobbyComponent.extractRoomId(input);
+    if (!roomId) {
+      this.error.set('Please enter a valid room code or link');
+      return;
+    }
+    this.error.set('');
+    this.router.navigate(['/r', roomId]);
+  }
+
+  static extractRoomId(input: string): string | null {
+    const s = (input || '').trim();
+    if (!s) return null;
+    const rIndex = s.lastIndexOf('/r/');
+    if (rIndex !== -1) {
+      const after = s.substring(rIndex + 3);
+      const id = after.split(/[?/#]/)[0];
+      return id || null;
+    }
+    // Fallback: treat as code; normalize whitespace
+    return s || null;
   }
 }

@@ -4,6 +4,13 @@
   padding: 16px;
 }
 
+section { margin-bottom: 24px; }
+
+label {
+  display: block;
+  font-weight: 600;
+}
+
 input {
   width: 100%;
   padding: 8px;
@@ -14,7 +21,10 @@ button {
   padding: 8px 12px;
 }
 
+.muted { color: #666; font-size: 12px; }
+
+.actions { margin-top: 8px; }
+
 .error {
   color: #b00020;
 }
-

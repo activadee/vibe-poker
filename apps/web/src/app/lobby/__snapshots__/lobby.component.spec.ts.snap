@@ -1,0 +1,111 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`LobbyComponent renders initial state (snapshot) 1`] = `
+<div
+  id="root1"
+>
+  <div
+    class="lobby"
+  >
+    <h1>
+      Vibe Kanban
+    </h1>
+    <section
+      aria-labelledby="create-title"
+    >
+      <h2
+        id="create-title"
+      >
+        Create a room
+      </h2>
+      <p>
+        Enter your display name to start a new room.
+      </p>
+      <form
+        autocomplete="on"
+        class="ng-untouched ng-pristine ng-valid"
+        novalidate=""
+      >
+        <label
+          for="displayName"
+        >
+          Display Name
+        </label>
+        <input
+          aria-describedby="nameHelp"
+          autocomplete="name"
+          class="ng-untouched ng-pristine ng-valid"
+          id="displayName"
+          maxlength="30"
+          minlength="3"
+          name="displayName"
+          placeholder="e.g. Alice"
+          required=""
+        />
+        <small
+          class="muted"
+          id="nameHelp"
+        >
+          3–30 characters
+        </small>
+        <div
+          class="actions"
+        >
+          <button
+            disabled=""
+            type="submit"
+          >
+            Create Room
+          </button>
+        </div>
+      </form>
+    </section>
+    <section
+      aria-labelledby="join-title"
+    >
+      <h2
+        id="join-title"
+      >
+        Join a room
+      </h2>
+      <p>
+        Paste a room code or full link to join.
+      </p>
+      <form
+        class="ng-untouched ng-pristine ng-valid"
+        novalidate=""
+      >
+        <label
+          for="roomCode"
+        >
+          Room Code or Link
+        </label>
+        <input
+          aria-describedby="roomHelp"
+          class="ng-untouched ng-pristine ng-valid"
+          id="roomCode"
+          name="roomCode"
+          placeholder="ABCD-1234 or https://…/r/ABCD-1234"
+        />
+        <small
+          class="muted"
+          id="roomHelp"
+        >
+          Join is enabled when code is present
+        </small>
+        <div
+          class="actions"
+        >
+          <button
+            disabled=""
+            type="submit"
+          >
+            Join Room
+          </button>
+        </div>
+      </form>
+    </section>
+    
+  </div>
+</div>
+`;
