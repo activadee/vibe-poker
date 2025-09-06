@@ -123,11 +123,12 @@ export class RoomsGateway implements OnGatewayDisconnect {
 
     // Add participant (allow duplicate names; socket.id is unique)
     // If the room contains a placeholder host entry matching the name, elevate to host
+    const requestedRole = payload?.role;
     const shouldBeHost = !!room.participants.find((p) => p.role === 'host' && p.name === name);
     const participant: Participant = {
       id: client.id,
       name,
-      role: shouldBeHost ? 'host' : 'player',
+      role: shouldBeHost ? 'host' : requestedRole === 'observer' ? 'observer' : 'player',
     };
     const updated = this.rooms.addParticipant(roomId, participant);
     this.logEvent({ event: 'room_join', room_id: roomId, name, socket_id: client.id });

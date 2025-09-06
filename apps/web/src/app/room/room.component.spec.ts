@@ -122,4 +122,20 @@ describe('RoomComponent', () => {
     comp.castVote('5');
     expect((comp.socket.emit as jest.Mock).mock.calls.some((c: any[]) => c[0] === 'vote:cast')).toBe(false);
   });
+
+  it('join emits role=observer when checkbox selected', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    comp.roomId.set('ROOM1');
+    comp.name = 'Olivia';
+    comp.joinAsObserver = true;
+
+    const fakeSocket = { emit: jest.fn(), removeAllListeners: jest.fn(), disconnect: jest.fn() } as any;
+    comp.socket = fakeSocket; // So connect() returns this
+
+    comp.join();
+
+    expect(fakeSocket.emit).toHaveBeenCalledWith('room:join', expect.objectContaining({ roomId: 'ROOM1', name: 'Olivia', role: 'observer' }));
+  });
 });

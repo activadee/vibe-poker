@@ -1,10 +1,14 @@
 // WebSocket event and payload contracts
-import type { DeckId } from './domain';
+import type { DeckId, Role } from './domain';
 
 export interface RoomJoinPayload {
   roomId: string;
   name: string;
   secret?: string;
+  // Optional requested role for join. Server enforces permissions
+  // and will only honor 'observer' (players are default; host is
+  // determined by server placeholder logic).
+  role?: Extract<Role, 'observer' | 'player'>;
 }
 
 export interface RoomErrorEvent {
@@ -39,4 +43,3 @@ export interface VoteProgressEvent {
   // ids of participants who have voted (socket ids); used for UI badges
   votedIds: string[];
 }
-

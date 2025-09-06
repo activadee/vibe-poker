@@ -22,6 +22,8 @@ export class RoomComponent implements OnDestroy {
   url = '';
 
   name = '';
+  // Join preferences
+  joinAsObserver = false;
   error = signal('');
   joined = signal(false);
   participants = signal<Room['participants']>([]);
@@ -127,7 +129,9 @@ export class RoomComponent implements OnDestroy {
     this.error.set('');
     localStorage.setItem('displayName', name);
     const socket = this.connect();
-    socket.emit('room:join', { roomId: this.roomId(), name });
+    const payload: any = { roomId: this.roomId(), name };
+    if (this.joinAsObserver) payload.role = 'observer';
+    socket.emit('room:join', payload);
   }
 
   leave() {

@@ -71,6 +71,25 @@ describe('RoomsGateway', () => {
     expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 1, votedIds: [] });
   });
 
+  it('handleJoin honors requested observer role (not counted in progress)', () => {
+    const room = makeRoom('ROOMOBS');
+    rooms.get.mockReturnValue(room);
+    const updated: Room = { ...room, participants: [{ id: 'o1', name: 'Olivia', role: 'observer' as const }] };
+    rooms.addParticipant.mockReturnValue(updated);
+    rooms.computeProgress.mockImplementation((r: Room) => {
+      const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
+      const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
+      return { count: votedIds.length, total: eligible.length, votedIds };
+    });
+
+    const client: any = { id: 'o1', join: jest.fn(), emit: jest.fn() };
+    gateway.handleJoin({ roomId: 'ROOMOBS', name: 'Olivia', role: 'observer' } as any, client);
+
+    expect(rooms.addParticipant).toHaveBeenCalledWith('ROOMOBS', { id: 'o1', name: 'Olivia', role: 'observer' });
+    // Progress excludes observers
+    expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 0, votedIds: [] });
+  });
+
   it('handleJoin emits error when room missing', () => {
     rooms.get.mockReturnValue(undefined as any);
     const client: any = { id: 's2', join: jest.fn(), emit: jest.fn() };
