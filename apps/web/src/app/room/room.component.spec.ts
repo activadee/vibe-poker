@@ -95,4 +95,31 @@ describe('RoomComponent', () => {
     handlers['room:state']?.({ ...room, revealed: false, stats: undefined } as any);
     expect(comp.stats()).toBeNull();
   });
+
+  it('disables voting and ignores cast when role is observer (FR-013)', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    // Simulate joined state and current user as observer
+    comp.joined.set(true);
+    comp.socketId.set('o1');
+    comp.participants.set([
+      { id: 'o1', name: 'Olivia', role: 'observer' },
+      { id: 'p1', name: 'Alice', role: 'player' },
+    ]);
+
+    // Provide a fake socket to capture emits
+    comp.socket = { emit: jest.fn(), removeAllListeners: jest.fn(), disconnect: jest.fn() } as any;
+
+    fixture.detectChanges();
+
+    // UI: vote cards should be disabled and render hint
+    const btn = fixture.nativeElement.querySelector('button.card') as HTMLButtonElement;
+    expect(btn?.disabled).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Observers cannot vote');
+
+    // Behavior: castVote should early return and not emit
+    comp.castVote('5');
+    expect((comp.socket.emit as jest.Mock).mock.calls.some((c: any[]) => c[0] === 'vote:cast')).toBe(false);
+  });
 });
