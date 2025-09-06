@@ -95,4 +95,46 @@ describe('RoomComponent', () => {
     handlers['room:state']?.({ ...room, revealed: false, stats: undefined } as any);
     expect(comp.stats()).toBeNull();
   });
+
+  it('seeds story editor models and emits story:set on save', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    const handlers: Record<string, (arg?: unknown) => void> = {};
+    const fakeSocket = {
+      on: (evt: string, cb: (arg?: unknown) => void) => { handlers[evt] = cb; },
+      emit: jest.fn(),
+      removeAllListeners: jest.fn(),
+      disconnect: jest.fn(),
+    } as any;
+    // Attach socket and listeners
+    (comp as any).socket = fakeSocket;
+    (comp as any).setupSocketListeners(fakeSocket);
+
+    // Seed room state with a story
+    const room = {
+      id: 'ROOM1',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 1000,
+      participants: [{ id: 'h1', name: 'Host', role: 'host' }],
+      story: { id: 'S-1', title: 'Feature A', notes: 'Some notes' },
+    };
+    comp.roomId.set('ROOM1');
+    // Ensure myRole resolves to host
+    comp.socketId.set('h1');
+
+    handlers['room:state']?.(room as any);
+    expect(comp.story()).toEqual({ id: 'S-1', title: 'Feature A', notes: 'Some notes' });
+    expect(comp.storyTitleModel).toBe('Feature A');
+    expect(comp.storyNotesModel).toBe('Some notes');
+
+    // Update models and save; should emit story:set
+    comp.storyTitleModel = 'Updated Title';
+    comp.storyNotesModel = 'New notes';
+    comp.saveStory();
+    expect(fakeSocket.emit).toHaveBeenCalledWith(
+      'story:set',
+      expect.objectContaining({ story: expect.objectContaining({ title: 'Updated Title' }) })
+    );
+  });
 });

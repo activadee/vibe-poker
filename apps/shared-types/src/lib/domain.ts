@@ -19,13 +19,19 @@ export interface VoteStats {
   median: number;
 }
 
+export interface Story {
+  id: string;
+  title: string;
+  notes?: string;
+}
+
 export interface Room {
   id: string;
   createdAt: number; // epoch ms
   expiresAt: number; // epoch ms
   participants: Participant[];
   // Optional voting state
-  story?: string;
+  story?: Story;
   deckId?: DeckId;
   revealed?: boolean;
   // votes keyed by participant id; values are card identifiers
@@ -33,4 +39,3 @@ export interface Room {
   // Derived statistics when revealed
   stats?: VoteStats;
 }
-

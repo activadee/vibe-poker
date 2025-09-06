@@ -54,7 +54,7 @@ describe('shared-types public API', () => {
     const cast: VoteCastPayload = { value: '5' };
     const reset: VoteResetPayload = {};
     const reveal: VoteRevealPayload = {};
-    const story: StorySetPayload = { story: 'Implement feature' };
+    const story: StorySetPayload = { story: { id: 'S-1', title: 'Implement feature', notes: 'Acceptance & dev notes' } };
     const deck: DeckSetPayload = { deckId: 'fibonacci' };
     const progress: VoteProgressEvent = { count: 1, total: 3, votedIds: ['1'] };
     void join; void err; void cast; void reset; void reveal; void story; void deck; void progress;
