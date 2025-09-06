@@ -1,0 +1,73 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Node/Bun/Nx
+node_modules/
+dist/
+tmp/
+temp/
+.cache/
+.nyc_output/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.pid
+*.pid.lock
+*.seed
+*.tsbuildinfo
+*.eslintcache
+
+# Nx workspace data/cache
+.nx/cache/
+.nx/workspace-data/
+.nx/workspace-state.json
+
+# Angular CLI cache
+.angular/
+.angular/cache/
+
+# Storybook
+storybook-static/
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+
+# Playwright
+playwright-report/
+blob-report/
+test-results/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# IDE/editor
+.idea/
+.history/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/*.code-snippets
+
+# Misc
+*.swo
+*.swp
+*.swn
+*.swm
+*.orig
+*.rej
+
+# Other build outputs
+build/
+out/

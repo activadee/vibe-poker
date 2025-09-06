@@ -1,0 +1,16 @@
+/* You can add global styles to this file, and also import other style files */
+
+:root {
+  --bg:#0f1024; --bg-2:#141a4a; --fg:#e6f7ff;
+  --accent-1:#00fff0; --accent-2:#ff00f4;
+  --card-bg:rgba(255,255,255,.08); --card-fg:#e6f7ff; --card-stroke:rgba(255,255,255,.25);
+  --elevation-2:0 10px 24px rgba(0,0,0,.35);
+  --elevation-3:0 16px 38px rgba(0,0,0,.5);
+  --radius:16px;
+}
+html,body{
+  height:100%;
+  margin:0;
+  background:radial-gradient(1200px 800px at 20% 0%,#1a1f5c 0%,#0f1024 60%,#0a0b1e 100%);
+  color:var(--fg);
+}
