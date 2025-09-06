@@ -2,7 +2,7 @@ import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import type { Room } from '@scrum-poker/shared-types';
+import type { Room, RoomErrorEvent } from '@scrum-poker/shared-types';
 import { io, Socket } from 'socket.io-client';
 
 @Component({
@@ -29,13 +29,10 @@ export class RoomComponent implements OnDestroy {
 
   constructor() {
     this.route.paramMap.subscribe((params) => {
-      this.roomId.set(params.get('roomId') ?? '');
-      this.copied.set(false);
+      const id = params.get('roomId') ?? '';
+      this.roomId.set(id);
       this.url = location.href;
-      this.error.set('');
-      this.joined.set(false);
-      this.participants.set([]);
-      this.disconnect();
+      this.resetState();
       const saved = localStorage.getItem('displayName') ?? '';
       if (saved) {
         this.name = saved;
@@ -49,17 +46,12 @@ export class RoomComponent implements OnDestroy {
     this.disconnect();
   }
 
+  private static readonly SOCKET_IO_PATH = '/api/socket.io';
+
   private connect(): Socket {
     if (this.socket) return this.socket;
-    this.socket = io({ path: '/api/socket.io' });
-    this.socket.on('room:error', (err: { message: string }) => {
-      this.error.set(err?.message || 'Something went wrong joining the room');
-    });
-    this.socket.on('room:state', (room: Room) => {
-      if (!room || room.id !== this.roomId()) return;
-      this.participants.set(room.participants ?? []);
-      this.joined.set(true);
-    });
+    this.socket = io({ path: RoomComponent.SOCKET_IO_PATH });
+    this.setupSocketListeners(this.socket);
     return this.socket;
   }
 
@@ -69,6 +61,28 @@ export class RoomComponent implements OnDestroy {
       this.socket.disconnect();
       this.socket = undefined;
     }
+  }
+
+  private resetState() {
+    this.copied.set(false);
+    this.error.set('');
+    this.joined.set(false);
+    this.participants.set([]);
+    this.disconnect();
+  }
+
+  private setupSocketListeners(socket: Socket) {
+    socket.on('room:error', (err: RoomErrorEvent | { message?: string } | undefined) => {
+      const message = err && 'message' in err && typeof err.message === 'string'
+        ? err.message
+        : 'Something went wrong joining the room';
+      this.error.set(message);
+    });
+    socket.on('room:state', (room: Room) => {
+      if (!room || room.id !== this.roomId()) return;
+      this.participants.set(room.participants ?? []);
+      this.joined.set(true);
+    });
   }
 
   join() {

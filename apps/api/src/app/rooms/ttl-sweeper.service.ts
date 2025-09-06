@@ -14,8 +14,9 @@ export class TtlSweeperService implements OnModuleInit, OnModuleDestroy {
       try {
         const removed = this.rooms.removeExpired();
         if (removed > 0) {
+          const remaining = this.rooms.allIds().length;
           this.logger.log(
-            JSON.stringify({ event: 'ttl_sweep', removed, remaining: this.rooms.allIds().length })
+            JSON.stringify({ event: 'ttl_sweep', removed, remaining })
           );
         }
       } catch (e) {
@@ -28,4 +29,3 @@ export class TtlSweeperService implements OnModuleInit, OnModuleDestroy {
     if (this.timer) clearInterval(this.timer);
   }
 }
-

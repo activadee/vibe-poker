@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CreateRoomResponse, CreateRoomRequest } from '@scrum-poker/shared-types';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-lobby',
@@ -29,15 +30,20 @@ export class LobbyComponent {
     this.error.set('');
     this.loading.set(true);
     try {
-      const res = await this.http
-        .post<CreateRoomResponse>('/api/rooms', { hostName } satisfies CreateRoomRequest)
-        .toPromise();
+      const res = await firstValueFrom(
+        this.http.post<CreateRoomResponse>(
+          '/api/rooms',
+          { hostName } satisfies CreateRoomRequest
+        )
+      );
       if (res?.id) {
         this.router.navigate(['/r', res.id]);
       } else {
         this.error.set('Unexpected response from server');
       }
-    } catch (e) {
+    } catch (err) {
+      // Keep user-facing message simple while still surfacing errors during development
+      console.error('Failed to create room', err);
       this.error.set('Failed to create room');
     } finally {
       this.loading.set(false);

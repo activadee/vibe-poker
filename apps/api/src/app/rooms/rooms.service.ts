@@ -2,12 +2,21 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Room } from '@scrum-poker/shared-types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O to avoid confusion
+const DIGITS = '0123456789';
+const ID_LETTER_COUNT = 4;
+const ID_DIGIT_COUNT = 4;
+const MAX_ID_ATTEMPTS = 1000;
 
 @Injectable()
 export class RoomsService {
   private readonly logger = new Logger(RoomsService.name);
   private readonly rooms = new Map<string, Room>();
   private readonly ttlMs = DAY_MS;
+
+  private logEvent(event: Record<string, unknown>) {
+    this.logger.log(JSON.stringify(event));
+  }
 
   create(hostName: string): Room {
     if (!hostName || typeof hostName !== 'string') {
@@ -28,9 +37,7 @@ export class RoomsService {
       ],
     };
     this.rooms.set(id, room);
-    this.logger.log(
-      JSON.stringify({ event: 'room_create', room_id: id, host: hostName })
-    );
+    this.logEvent({ event: 'room_create', room_id: id, host: hostName });
     return room;
   }
 
@@ -56,9 +63,7 @@ export class RoomsService {
       if (room.expiresAt <= now) {
         this.rooms.delete(id);
         removed++;
-        this.logger.log(
-          JSON.stringify({ event: 'room_expired', room_id: id })
-        );
+        this.logEvent({ event: 'room_expired', room_id: id });
       }
     }
     return removed;
@@ -66,14 +71,12 @@ export class RoomsService {
 
   private generateId(): string {
     // human-readable: AAAA-1234
-    const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O to avoid confusion
-    const digits = '0123456789';
-    const maxAttempts = 1000;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const pick = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
+    for (let attempt = 0; attempt < MAX_ID_ATTEMPTS; attempt++) {
       let id = '';
-      for (let i = 0; i < 4; i++) id += letters[Math.floor(Math.random() * letters.length)];
+      for (let i = 0; i < ID_LETTER_COUNT; i++) id += pick(LETTERS);
       id += '-';
-      for (let i = 0; i < 4; i++) id += digits[Math.floor(Math.random() * digits.length)];
+      for (let i = 0; i < ID_DIGIT_COUNT; i++) id += pick(DIGITS);
       if (!this.rooms.has(id)) return id;
     }
     // Extremely unlikely collision storm
@@ -100,9 +103,7 @@ export class RoomsService {
     const before = room.participants.length;
     room.participants = room.participants.filter((p) => p.id !== participantId);
     if (before !== room.participants.length) {
-      this.logger.log(
-        JSON.stringify({ event: 'participant_removed', room_id: roomId, participant_id: participantId })
-      );
+      this.logEvent({ event: 'participant_removed', room_id: roomId, participant_id: participantId });
     }
     return room;
   }

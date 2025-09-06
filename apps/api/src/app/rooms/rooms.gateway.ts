@@ -32,6 +32,10 @@ export class RoomsGateway implements OnGatewayDisconnect {
 
   constructor(private readonly rooms: RoomsService) {}
 
+  private logEvent(event: Record<string, unknown>) {
+    this.logger.log(JSON.stringify(event));
+  }
+
   private roomKey(roomId: string): string {
     return `room:${roomId}`;
   }
@@ -74,9 +78,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
       role: 'player',
     };
     const updated = this.rooms.addParticipant(roomId, participant);
-    this.logger.log(
-      JSON.stringify({ event: 'room_join', room_id: roomId, name, socket_id: client.id })
-    );
+    this.logEvent({ event: 'room_join', room_id: roomId, name, socket_id: client.id });
 
     // Broadcast state to all in room (including the joiner)
     this.server.to(this.roomKey(roomId)).emit('room:state', updated);
@@ -88,10 +90,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     this.socketRoom.delete(client.id);
     const room = this.rooms.removeParticipant(roomId, client.id);
     if (!room) return;
-    this.logger.log(
-      JSON.stringify({ event: 'room_leave', room_id: roomId, socket_id: client.id })
-    );
+    this.logEvent({ event: 'room_leave', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', room);
   }
 }
-
