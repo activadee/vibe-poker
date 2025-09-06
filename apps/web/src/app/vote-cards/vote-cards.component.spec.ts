@@ -67,4 +67,17 @@ describe('VoteCardsComponent', () => {
     fixture.detectChanges();
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it('shows tooltip and hint when disabled', () => {
+    component.disabled = true;
+    fixture.detectChanges();
+
+    const btn = fixture.nativeElement.querySelector('button.card') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute('title')).toBe('Observers cannot vote');
+
+    const hint = fixture.nativeElement.querySelector('.hint');
+    expect(hint?.textContent?.trim()).toBe('Observers cannot vote');
+  });
 });

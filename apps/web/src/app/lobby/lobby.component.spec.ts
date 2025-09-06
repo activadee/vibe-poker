@@ -71,4 +71,13 @@ describe('LobbyComponent', () => {
     comp.joinRoom();
     expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ZZZZ-9999']);
   });
+
+  it('passes role=observer when Join as observer is checked', () => {
+    const fixture = TestBed.createComponent(LobbyComponent);
+    const comp = fixture.componentInstance as any;
+    comp.roomCode = 'ABCD-1234';
+    comp.joinAsObserver = true;
+    comp.joinRoom();
+    expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ABCD-1234'], { queryParams: { role: 'observer' } });
+  });
 });

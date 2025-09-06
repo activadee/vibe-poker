@@ -16,6 +16,10 @@
         Your name
         <input [(ngModel)]="name" (keyup.enter)="join()" placeholder="Alice" />
       </label>
+      <label class="check">
+        <input type="checkbox" [(ngModel)]="joinAsObserver" />
+        Join as observer (cannot vote)
+      </label>
       <button class="btn primary" (click)="join()">Join Room</button>
     </div>
   }

@@ -17,7 +17,13 @@ describe('RoomComponent', () => {
       providers: [
         { provide: Router, useValue: { navigateByUrl: navigateByUrlSpy, createUrlTree: jest.fn(() => ({})), serializeUrl: jest.fn(() => '/'), events: { subscribe: () => ({ unsubscribe: () => undefined }) } } },
         // Minimal ActivatedRoute stub
-        { provide: ActivatedRoute, useValue: { paramMap: paramMap$.asObservable() } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: paramMap$.asObservable(),
+            snapshot: { queryParamMap: convertToParamMap({}) },
+          },
+        },
       ],
     });
   });
@@ -36,7 +42,7 @@ describe('RoomComponent', () => {
     expect(btn?.textContent).toContain('Join Room');
   });
 
-  it('deep-link with saved name auto-calls join()', () => {
+  it('deep-link with saved name does not auto-join', () => {
     jest.useFakeTimers();
     localStorage.setItem('displayName', 'Eve');
     paramMap$.next(convertToParamMap({ roomId: 'ROOM2' }));
@@ -45,9 +51,9 @@ describe('RoomComponent', () => {
     const comp = fixture.componentInstance as any;
     const joinSpy = jest.spyOn(comp, 'join').mockImplementation(() => undefined);
 
-    // Flush the scheduled join
+    // Flush any scheduled tasks
     jest.runOnlyPendingTimers();
-    expect(joinSpy).toHaveBeenCalled();
+    expect(joinSpy).not.toHaveBeenCalled();
     jest.useRealTimers();
   });
 
@@ -142,6 +148,50 @@ describe('RoomComponent', () => {
     // If not revealed, stats should clear
     handlers['room:state']?.({ ...room, revealed: false, stats: undefined } as any);
     expect(comp.stats()).toBeNull();
+  });
+
+  it('disables voting and ignores cast when role is observer (FR-013)', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    // Simulate joined state and current user as observer
+    comp.joined.set(true);
+    comp.socketId.set('o1');
+    comp.participants.set([
+      { id: 'o1', name: 'Olivia', role: 'observer' },
+      { id: 'p1', name: 'Alice', role: 'player' },
+    ]);
+
+    // Provide a fake socket to capture emits
+    comp.socket = { emit: jest.fn(), removeAllListeners: jest.fn(), disconnect: jest.fn() } as any;
+
+    fixture.detectChanges();
+
+    // UI: vote cards should be disabled and render hint
+    const btn = fixture.nativeElement.querySelector('button.card') as HTMLButtonElement;
+    expect(btn?.disabled).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Observers cannot vote');
+
+    // Behavior: castVote should early return and not emit
+    comp.castVote('5');
+    expect((comp.socket.emit as jest.Mock).mock.calls.some((c: any[]) => c[0] === 'vote:cast')).toBe(false);
+  });
+
+  it('join emits role=observer when checkbox selected', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    comp.roomId.set('ROOM1');
+    comp.name = 'Olivia';
+    comp.joinAsObserver = true;
+
+    const fakeSocket = { emit: jest.fn(), removeAllListeners: jest.fn(), disconnect: jest.fn() } as any;
+    comp.socket = fakeSocket; // So connect() returns this
+
+    comp.join();
+
+    expect(fakeSocket.emit).toHaveBeenCalledWith('room:join', expect.objectContaining({ roomId: 'ROOM1', name: 'Olivia', role: 'observer' }));
+
   });
 
   it('seeds story editor models and emits story:set on save', () => {

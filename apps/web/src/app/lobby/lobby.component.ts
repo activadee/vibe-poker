@@ -19,6 +19,7 @@ export class LobbyComponent {
 
   name = '';
   roomCode = '';
+  joinAsObserver = false;
   loading = signal(false);
   error = signal('');
 
@@ -74,7 +75,11 @@ export class LobbyComponent {
       return;
     }
     this.error.set('');
-    this.router.navigate(['/r', roomId]);
+    if (this.joinAsObserver) {
+      this.router.navigate(['/r', roomId], { queryParams: { role: 'observer' } });
+    } else {
+      this.router.navigate(['/r', roomId]);
+    }
   }
 
   static extractRoomId(input: string): string | null {

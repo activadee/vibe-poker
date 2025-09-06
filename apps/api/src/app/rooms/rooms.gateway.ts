@@ -68,15 +68,15 @@ export class RoomsGateway implements OnGatewayDisconnect {
   private safeRoom(room: Room): Room {
     // Hide votes before reveal to avoid leaking values
     if (!room.revealed) {
-      const { votes: _omitted, stats: _stats_omitted, ...rest } = room as any;
-      return rest as Room;
+      const { votes: _omitted, stats: _stats_omitted, ...rest } = room;
+      return rest;
     }
     // When revealed, compute and attach stats derived from numeric votes
     const stats = this.rooms.computeStats(room);
     if (stats) {
-      (room as any).stats = stats;
+      room.stats = stats;
     } else {
-      delete (room as any).stats;
+      delete room.stats;
     }
     return room;
   }
@@ -124,11 +124,12 @@ export class RoomsGateway implements OnGatewayDisconnect {
 
     // Add participant (allow duplicate names; socket.id is unique)
     // If the room contains a placeholder host entry matching the name, elevate to host
+    const requestedRole = payload?.role;
     const shouldBeHost = !!room.participants.find((p) => p.role === 'host' && p.name === name);
     const participant: Participant = {
       id: client.id,
       name,
-      role: shouldBeHost ? 'host' : 'player',
+      role: shouldBeHost ? 'host' : requestedRole === 'observer' ? 'observer' : 'player',
     };
     const updated = this.rooms.addParticipant(roomId, participant);
     this.logEvent({ event: 'room_join', room_id: roomId, name, socket_id: client.id });

@@ -2,7 +2,7 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import type { Room, RoomErrorEvent, VoteProgressEvent, Participant, VoteStats, Story } from '@scrum-poker/shared-types';
+import type { Room, RoomErrorEvent, VoteProgressEvent, Participant, VoteStats, Story, RoomJoinPayload } from '@scrum-poker/shared-types';
 import { io, Socket } from 'socket.io-client';
 import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
 
@@ -22,6 +22,8 @@ export class RoomComponent implements OnDestroy {
   url = '';
 
   name = '';
+  // Join preferences
+  joinAsObserver = false;
   error = signal('');
   joined = signal(false);
   participants = signal<Room['participants']>([]);
@@ -56,9 +58,11 @@ export class RoomComponent implements OnDestroy {
       const saved = localStorage.getItem('displayName') ?? '';
       if (saved) {
         this.name = saved;
-        // defer join slightly to allow view to settle
-        setTimeout(() => this.join(), 0);
       }
+      // Apply role preference from query param if present
+      const role = this.route.snapshot.queryParamMap.get('role');
+      this.joinAsObserver = role === 'observer';
+      // Do not auto-join: allow user to confirm role before joining
     });
   }
 
@@ -132,7 +136,14 @@ export class RoomComponent implements OnDestroy {
     this.error.set('');
     localStorage.setItem('displayName', name);
     const socket = this.connect();
-    socket.emit('room:join', { roomId: this.roomId(), name });
+    let payload: RoomJoinPayload = {
+      roomId: this.roomId(),
+      name,
+    };
+    if (this.joinAsObserver) {
+      payload = { ...payload, role: 'observer' };
+    }
+    socket.emit('room:join', payload);
   }
 
   leave() {

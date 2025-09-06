@@ -1,10 +1,14 @@
 // WebSocket event and payload contracts
-import type { DeckId, Story } from './domain';
+import type { DeckId, Story,Role } from './domain';
 
 export interface RoomJoinPayload {
   roomId: string;
   name: string;
   secret?: string;
+  // Optional requested role for join. Server enforces permissions
+  // and will only honor 'observer' (players are default; host is
+  // determined by server placeholder logic).
+  role?: Extract<Role, 'observer' | 'player'>;
 }
 
 export interface RoomErrorEvent {

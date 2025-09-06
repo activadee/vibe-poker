@@ -93,6 +93,16 @@ exports[`LobbyComponent renders initial state (snapshot) 1`] = `
         >
           Join is enabled when code is present
         </small>
+        <label
+          class="check"
+        >
+          <input
+            class="ng-untouched ng-pristine ng-valid"
+            name="joinAsObserver"
+            type="checkbox"
+          />
+           Join as observer (cannot vote) 
+        </label>
         <div
           class="actions"
         >
