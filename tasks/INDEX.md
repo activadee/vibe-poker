@@ -33,3 +33,4 @@ This folder contains Functional Requirements (FR‑xxx) and Non‑Functional Req
 - NFR‑008 Testing Strategy
 - NFR‑009 OSS Hygiene
 - NFR‑010 Deployment & Environments
+- NFR‑011 Split Shared Types
