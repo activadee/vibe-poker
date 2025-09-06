@@ -2,7 +2,7 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import type { Room, RoomErrorEvent, VoteProgressEvent, Participant, VoteStats, RoomJoinPayload } from '@scrum-poker/shared-types';
+import type { Room, RoomErrorEvent, VoteProgressEvent, Participant, VoteStats, Story, RoomJoinPayload } from '@scrum-poker/shared-types';
 import { io, Socket } from 'socket.io-client';
 import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
 
@@ -28,7 +28,9 @@ export class RoomComponent implements OnDestroy {
   joined = signal(false);
   participants = signal<Room['participants']>([]);
   revealed = signal(false);
-  story = signal('');
+  story = signal<Story | null>(null);
+  storyTitleModel = '';
+  storyNotesModel = '';
   deckId = signal<'fibonacci' | string>('fibonacci');
   votes = signal<Record<string, string>>({});
   // FR-009 results stats
@@ -107,7 +109,10 @@ export class RoomComponent implements OnDestroy {
       if (!room || room.id !== this.roomId()) return;
       this.participants.set(room.participants ?? []);
       this.revealed.set(!!room.revealed);
-      this.story.set(room.story ?? '');
+      this.story.set(room.story ?? null);
+      // Seed editor models for host convenience
+      this.storyTitleModel = room.story?.title ?? '';
+      this.storyNotesModel = room.story?.notes ?? '';
       this.deckId.set(room.deckId ?? 'fibonacci');
       this.votes.set(room.votes ?? {});
       this.stats.set(room.revealed && room.stats ? room.stats : null);
@@ -172,6 +177,25 @@ export class RoomComponent implements OnDestroy {
     if (!ok) return;
     const socket = this.connect();
     socket.emit('vote:reset', {});
+  }
+
+  private genStoryId(): string {
+    return `S-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  }
+
+  saveStory() {
+    if (this.myRole() !== 'host') return;
+    const title = (this.storyTitleModel ?? '').trim();
+    const notes = (this.storyNotesModel ?? '').toString();
+    if (!title) return;
+    const socket = this.connect();
+    const existing = this.story();
+    const payload: Story = {
+      id: existing?.id || this.genStoryId(),
+      title,
+      ...(notes.trim() ? { notes } : {}),
+    };
+    socket.emit('story:set', { story: payload });
   }
 
   // UI helper for templates

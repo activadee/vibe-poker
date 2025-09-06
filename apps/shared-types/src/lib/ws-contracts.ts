@@ -1,5 +1,5 @@
 // WebSocket event and payload contracts
-import type { DeckId, Role } from './domain';
+import type { DeckId, Story,Role } from './domain';
 
 export interface RoomJoinPayload {
   roomId: string;
@@ -27,7 +27,7 @@ export type VoteResetPayload = Record<string, never>;
 export type VoteRevealPayload = Record<string, never>;
 
 export interface StorySetPayload {
-  story: string;
+  story: Story;
 }
 
 export interface DeckSetPayload {

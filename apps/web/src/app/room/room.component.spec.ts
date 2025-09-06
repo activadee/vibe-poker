@@ -15,11 +15,59 @@ describe('RoomComponent', () => {
     TestBed.configureTestingModule({
       imports: [RoomComponent],
       providers: [
-        { provide: Router, useValue: { navigateByUrl: navigateByUrlSpy } },
+        { provide: Router, useValue: { navigateByUrl: navigateByUrlSpy, createUrlTree: jest.fn(() => ({})), serializeUrl: jest.fn(() => '/'), events: { subscribe: () => ({ unsubscribe: () => undefined }) } } },
         // Minimal ActivatedRoute stub
         { provide: ActivatedRoute, useValue: { paramMap: paramMap$.asObservable() } },
       ],
     });
+  });
+
+  it('deep-link without saved name shows join prompt', () => {
+    // Ensure no saved name
+    localStorage.removeItem('displayName');
+    paramMap$.next(convertToParamMap({ roomId: 'ROOM1' }));
+
+    const fixture = TestBed.createComponent(RoomComponent);
+    fixture.detectChanges();
+
+    const joinSection = fixture.nativeElement.querySelector('.join');
+    expect(joinSection).toBeTruthy();
+    const btn: HTMLButtonElement = joinSection.querySelector('button');
+    expect(btn?.textContent).toContain('Join Room');
+  });
+
+  it('deep-link with saved name auto-calls join()', () => {
+    jest.useFakeTimers();
+    localStorage.setItem('displayName', 'Eve');
+    paramMap$.next(convertToParamMap({ roomId: 'ROOM2' }));
+
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+    const joinSpy = jest.spyOn(comp, 'join').mockImplementation(() => undefined);
+
+    // Flush the scheduled join
+    jest.runOnlyPendingTimers();
+    expect(joinSpy).toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  it('shows invalid room error and CTA when room:error received', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    // Register socket listeners on a fake socket
+    const handlers: Record<string, (arg?: any) => void> = {};
+    const fakeSocket = { on: (evt: string, cb: (arg?: any) => void) => { handlers[evt] = cb; } } as any;
+    (comp as any).setupSocketListeners(fakeSocket);
+
+    // Simulate server reporting invalid room
+    handlers['room:error']?.({ code: 'invalid_room', message: 'This room does not exist or has expired.' });
+    fixture.detectChanges();
+
+    const errorEl: HTMLElement = fixture.nativeElement.querySelector('.error');
+    expect(errorEl?.textContent).toContain('This room does not exist or has expired.');
+    const cta: HTMLAnchorElement = errorEl.querySelector('a.btn');
+    expect(cta?.textContent).toContain('Create a new room');
   });
 
   it('leave disconnects socket, clears state and navigates home', () => {
@@ -137,5 +185,46 @@ describe('RoomComponent', () => {
     comp.join();
 
     expect(fakeSocket.emit).toHaveBeenCalledWith('room:join', expect.objectContaining({ roomId: 'ROOM1', name: 'Olivia', role: 'observer' }));
+
+  it('seeds story editor models and emits story:set on save', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    const handlers: Record<string, (arg?: unknown) => void> = {};
+    const fakeSocket = {
+      on: (evt: string, cb: (arg?: unknown) => void) => { handlers[evt] = cb; },
+      emit: jest.fn(),
+      removeAllListeners: jest.fn(),
+      disconnect: jest.fn(),
+    } as any;
+    // Attach socket and listeners
+    (comp as any).socket = fakeSocket;
+    (comp as any).setupSocketListeners(fakeSocket);
+
+    // Seed room state with a story
+    const room = {
+      id: 'ROOM1',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 1000,
+      participants: [{ id: 'h1', name: 'Host', role: 'host' }],
+      story: { id: 'S-1', title: 'Feature A', notes: 'Some notes' },
+    };
+    comp.roomId.set('ROOM1');
+    // Ensure myRole resolves to host
+    comp.socketId.set('h1');
+
+    handlers['room:state']?.(room as any);
+    expect(comp.story()).toEqual({ id: 'S-1', title: 'Feature A', notes: 'Some notes' });
+    expect(comp.storyTitleModel).toBe('Feature A');
+    expect(comp.storyNotesModel).toBe('Some notes');
+
+    // Update models and save; should emit story:set
+    comp.storyTitleModel = 'Updated Title';
+    comp.storyNotesModel = 'New notes';
+    comp.saveStory();
+    expect(fakeSocket.emit).toHaveBeenCalledWith(
+      'story:set',
+      expect.objectContaining({ story: expect.objectContaining({ title: 'Updated Title' }) })
+    );
   });
 });
