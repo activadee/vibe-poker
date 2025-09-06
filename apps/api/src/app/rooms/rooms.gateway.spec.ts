@@ -26,6 +26,7 @@ describe('RoomsGateway', () => {
             addParticipant: jest.fn(),
             removeParticipant: jest.fn(),
             castVote: jest.fn(),
+            reset: jest.fn(),
             computeProgress: jest.fn(),
           },
         },
@@ -266,5 +267,65 @@ describe('RoomsGateway', () => {
     expect(stateAfter).toBeDefined();
     expect(stateAfter.votes).toEqual(room.votes);
     expect(stateAfter.stats).toEqual({ avg: 6.5, median: 6.5 });
+  });
+
+  it('host can reset votes: broadcasts hidden state and 0/Y progress', () => {
+    const room = makeRoom('ROOMR');
+    room.participants = [
+      { id: 'h1', name: 'Hannah', role: 'host' },
+      { id: 'p1', name: 'Alice', role: 'player' },
+    ];
+    room.votes = { p1: '5', h1: '8' } as any;
+    room.revealed = true;
+
+    rooms.get.mockReturnValue(room);
+    rooms.reset.mockImplementation((roomId: string) => {
+      if (roomId !== 'ROOMR') throw new Error('wrong room');
+      room.revealed = false;
+      room.votes = {} as any;
+      // stats removed implicitly
+      delete (room as any).stats;
+      return room;
+    });
+    rooms.computeProgress.mockImplementation((r: Room) => {
+      const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
+      const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
+      return { count: votedIds.length, total: eligible.length, votedIds };
+    });
+
+    // Map socket to room as host
+    (gateway as any).socketRoom.set('h1', 'ROOMR');
+    const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
+
+    gateway.handleVoteReset({} as any, host);
+
+    // Expect state broadcast with hidden votes and revealed=false
+    const state = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
+    expect(state).toBeDefined();
+    expect('votes' in state).toBe(false);
+    expect('stats' in state).toBe(false);
+    expect(state.revealed).toBe(false);
+    // And progress reset to 0/2
+    expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 2, votedIds: [] });
+  });
+
+  it('non-host cannot reset', () => {
+    const room = makeRoom('ROOMR2');
+    room.participants = [
+      { id: 'p1', name: 'Paula', role: 'player' },
+    ];
+    rooms.get.mockReturnValue(room);
+    (gateway as any).socketRoom.set('p1', 'ROOMR2');
+    const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
+
+    gateway.handleVoteReset({} as any, client);
+
+    expect(client.emit).toHaveBeenCalledWith(
+      'room:error',
+      expect.objectContaining({ code: 'forbidden' })
+    );
+    // Should not broadcast to room
+    const toMock = (gateway as any).server.to as jest.Mock;
+    expect(toMock).not.toHaveBeenCalledWith('room:ROOMR2');
   });
 });

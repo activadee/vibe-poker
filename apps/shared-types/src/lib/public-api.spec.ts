@@ -13,7 +13,7 @@ import type {
   StorySetPayload,
   DeckSetPayload,
   VoteProgressEvent,
-} from '@scrum-poker/shared-types';
+} from '../index';
 
 // This spec ensures the public API surface remains stable by
 // type-checking imports from the package entrypoint.
@@ -62,4 +62,3 @@ describe('shared-types public API', () => {
     expect(true).toBe(true);
   });
 });
-

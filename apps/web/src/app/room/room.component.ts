@@ -156,6 +156,9 @@ export class RoomComponent implements OnDestroy {
   }
 
   resetVotes() {
+    // Host-only action in UI; ask for confirmation
+    const ok = window.confirm('Reset votes for this round?');
+    if (!ok) return;
     const socket = this.connect();
     socket.emit('vote:reset', {});
   }

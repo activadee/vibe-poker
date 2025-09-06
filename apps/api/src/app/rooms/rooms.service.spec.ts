@@ -114,4 +114,33 @@ describe('RoomsService', () => {
       expect(stats).toBeUndefined();
     });
   });
+
+  it('reset (FR-010) clears votes, hides reveal, and sets progress 0/Y', () => {
+    const room = service.create('Host');
+    // Add eligible voters (host + two players) and one observer
+    service.addParticipant(room.id, { id: 'h1', name: 'Host', role: 'host' });
+    service.addParticipant(room.id, { id: 'p1', name: 'Alice', role: 'player' });
+    service.addParticipant(room.id, { id: 'p2', name: 'Bob', role: 'player' });
+    service.addParticipant(room.id, { id: 'o1', name: 'Olivia', role: 'observer' });
+
+    // Cast some votes and mark revealed
+    service.castVote(room.id, 'p1', '5');
+    service.castVote(room.id, 'p2', '8');
+    (room as any).revealed = true;
+    (room as any).stats = { avg: 6.5, median: 6.5 };
+
+    // Execute reset
+    const after = service.reset(room.id);
+
+    // Votes cleared and not revealed
+    expect(after.revealed).toBe(false);
+    expect(after.votes).toEqual({});
+    expect((after as any).stats).toBeUndefined();
+
+    // Progress is 0 out of eligible voters (3: host + 2 players)
+    const progress = service.computeProgress(after);
+    expect(progress.count).toBe(0);
+    expect(progress.total).toBe(3);
+    expect(progress.votedIds).toEqual([]);
+  });
 });

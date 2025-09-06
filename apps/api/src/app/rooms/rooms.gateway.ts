@@ -212,8 +212,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
       this.logEvent({ event: 'auth_forbidden', action: 'vote:reset', room_id: roomId, socket_id: client.id, role: me.role });
       return;
     }
-    room.revealed = false;
-    room.votes = {};
+    this.rooms.reset(roomId);
     this.logEvent({ event: 'vote_reset', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);

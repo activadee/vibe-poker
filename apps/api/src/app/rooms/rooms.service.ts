@@ -86,6 +86,22 @@ export class RoomsService {
   }
 
   /**
+   * FR-010: Reset the current voting round.
+   * - Clears all stored votes
+   * - Marks the room as not revealed
+   * - Removes any previously computed statistics
+   * Returns the updated room.
+   */
+  reset(roomId: string): Room {
+    const room = this.rooms.get(roomId);
+    if (!room) throw new Error('Room not found');
+    room.revealed = false;
+    room.votes = {};
+    delete (room as any).stats;
+    return room;
+  }
+
+  /**
    * Calculate vote progress for a room without exposing values.
    * Only players and host are counted as eligible voters.
    */
