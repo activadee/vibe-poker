@@ -74,12 +74,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
   }
 
   private computeProgress(room: Room): VoteProgressEvent {
-    const eligible = room.participants.filter((p) => this.isPlayer(p));
-    const total = eligible.length;
-    const votedIds = Object.keys(room.votes ?? {}).filter((id) =>
-      eligible.some((p) => p.id === id)
-    );
-    return { count: votedIds.length, total, votedIds };
+    // Delegate to service for consistency and testability
+    return this.rooms.computeProgress(room);
   }
 
   private broadcastProgress(roomId: string, room: Room) {
@@ -168,9 +164,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     }
     const value = (payload?.value ?? '').toString();
     if (!value) return; // ignore invalid
-    // Lazy-init votes map
-    const votes = room.votes ?? (room.votes = {});
-    votes[client.id] = value;
+    // Persist via service (overwrites if re-cast)
+    this.rooms.castVote(roomId, client.id, value);
     this.logEvent({ event: 'vote_cast', room_id: roomId, socket_id: client.id });
     // Broadcast progress only (no values) to all clients
     this.broadcastProgress(roomId, room);

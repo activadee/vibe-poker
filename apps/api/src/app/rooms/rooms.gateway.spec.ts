@@ -25,6 +25,8 @@ describe('RoomsGateway', () => {
             get: jest.fn(),
             addParticipant: jest.fn(),
             removeParticipant: jest.fn(),
+            castVote: jest.fn(),
+            computeProgress: jest.fn(),
           },
         },
       ],
@@ -45,6 +47,11 @@ describe('RoomsGateway', () => {
     rooms.get.mockReturnValue(room);
     const updated: Room = { ...room, participants: [{ id: 's1', name: 'Alice', role: 'player' as const }] };
     rooms.addParticipant.mockReturnValue(updated);
+    rooms.computeProgress.mockImplementation((r: Room) => {
+      const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
+      const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
+      return { count: votedIds.length, total: eligible.length, votedIds };
+    });
 
     const client: any = { id: 's1', join: jest.fn(), emit: jest.fn() };
 
@@ -190,6 +197,17 @@ describe('RoomsGateway', () => {
       { id: 'obs', name: 'Olivia', role: 'observer' },
     ];
     rooms.get.mockReturnValue(room);
+    rooms.castVote.mockImplementation((roomId: string, pid: string, v: string) => {
+      if (room.id !== roomId) throw new Error('wrong room');
+      room.votes = room.votes ?? {};
+      room.votes[pid] = v;
+      return room;
+    });
+    rooms.computeProgress.mockImplementation((r: Room) => {
+      const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
+      const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
+      return { count: votedIds.length, total: eligible.length, votedIds };
+    });
 
     // Map socket to room
     (gateway as any).socketRoom.set('p1', 'ROOM1');

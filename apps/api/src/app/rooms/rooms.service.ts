@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Room } from '@scrum-poker/shared-types';
+import type { VoteProgressEvent } from '@scrum-poker/shared-types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O to avoid confusion
@@ -67,6 +68,37 @@ export class RoomsService {
       }
     }
     return removed;
+  }
+
+  /**
+   * Store a vote value for a participant. Re-casting overwrites previous value.
+   * Returns the updated room.
+   */
+  castVote(roomId: string, participantId: string, value: string): Room {
+    const room = this.rooms.get(roomId);
+    if (!room) throw new Error('Room not found');
+    if (!participantId) throw new Error('Invalid participant');
+    const v = (value ?? '').toString();
+    if (!v) throw new Error('Invalid vote');
+    const votes = room.votes ?? (room.votes = {});
+    votes[participantId] = v;
+    return room;
+  }
+
+  /**
+   * Calculate vote progress for a room without exposing values.
+   * Only players and host are counted as eligible voters.
+   */
+  computeProgress(room: Room): VoteProgressEvent {
+    const eligible = (room.participants ?? []).filter(
+      (p) => p.role === 'player' || p.role === 'host'
+    );
+    const total = eligible.length;
+    const votes = room.votes ?? {};
+    const votedIds = Object.keys(votes).filter((id) =>
+      eligible.some((p) => p.id === id)
+    );
+    return { count: votedIds.length, total, votedIds };
   }
 
   private generateId(): string {
