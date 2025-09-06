@@ -1,0 +1,43 @@
+.deck {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.card {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+}
+
+.card:hover:not(:disabled) {
+  border-color: #888;
+}
+
+.card:focus-visible {
+  outline: 3px solid #1976d2;
+  outline-offset: 2px;
+}
+
+.card.selected {
+  border-color: #1976d2;
+  background: #e3f2fd;
+}
+
+.card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hint {
+  width: 100%;
+  color: #666;
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+

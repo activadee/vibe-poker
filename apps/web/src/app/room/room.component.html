@@ -57,14 +57,10 @@
 
     <div class="voting">
       <h3>Vote</h3>
-      <div class="deck">
-        @for (c of deck; track c) {
-          <button class="card" [disabled]="myRole() === 'observer'" (click)="castVote(c)">{{ c }}</button>
-        }
-      </div>
-      @if (myRole() === 'observer') {
-        <p class="hint">Observers cannot vote</p>
-      }
+      <app-vote-cards
+        [disabled]="myRole() === 'observer'"
+        (valueSelected)="castVote($event)"
+      />
     </div>
 
     @if (myRole() === 'host') {

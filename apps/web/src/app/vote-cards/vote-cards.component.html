@@ -1,0 +1,21 @@
+<div class="deck" role="list">
+  @for (item of items(); track item.value; let i = $index) {
+    <button
+      type="button"
+      class="card"
+      role="listitem"
+      [disabled]="disabled"
+      [attr.aria-pressed]="selected() === item.value ? 'true' : 'false'"
+      [class.selected]="selected() === item.value"
+      [attr.aria-label]="item.label === item.value ? 'Vote ' + item.value : item.label"
+      (click)="onCardClick(item.value)"
+      (keydown)="onKeydown($event, i)"
+    >
+      {{ item.value }}
+    </button>
+  }
+  @if (disabled) {
+    <p class="hint" aria-live="polite">Observers cannot vote</p>
+  }
+</div>
+

@@ -4,11 +4,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import type { Room, RoomErrorEvent, VoteProgressEvent, Participant } from '@scrum-poker/shared-types';
 import { io, Socket } from 'socket.io-client';
+import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
 
 @Component({
   selector: 'app-room',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, VoteCardsComponent],
   templateUrl: './room.component.html',
   styleUrls: ['./room.component.scss'],
 })
@@ -27,7 +28,6 @@ export class RoomComponent implements OnDestroy {
   revealed = signal(false);
   story = signal('');
   deckId = signal<'fibonacci' | string>('fibonacci');
-  readonly deck = ['0', '1', '2', '3', '5', '8', '13', '20', '40', '100', '?'];
   votes = signal<Record<string, string>>({});
   // FR-006 progress state
   voteCount = signal(0);
@@ -102,7 +102,7 @@ export class RoomComponent implements OnDestroy {
       this.participants.set(room.participants ?? []);
       this.revealed.set(!!room.revealed);
       this.story.set(room.story ?? '');
-      this.deckId.set((room.deckId as any) ?? 'fibonacci');
+      this.deckId.set(room.deckId ?? 'fibonacci');
       this.votes.set(room.votes ?? {});
       this.joined.set(true);
     });
