@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Room } from '@scrum-poker/shared-types';
-import type { VoteProgressEvent } from '@scrum-poker/shared-types';
+import type { VoteProgressEvent, VoteStats } from '@scrum-poker/shared-types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O to avoid confusion
@@ -99,6 +99,44 @@ export class RoomsService {
       eligible.some((p) => p.id === id)
     );
     return { count: votedIds.length, total, votedIds };
+  }
+
+  /**
+   * FR-009: Compute average (1 decimal) and median (1 decimal)
+   * using only numeric card values and eligible voters (players + host).
+   * Returns undefined if there are no numeric votes.
+   */
+  computeStats(room: Room): VoteStats | undefined {
+    const eligibleIds = new Set(
+      (room.participants ?? [])
+        .filter((p) => p.role === 'player' || p.role === 'host')
+        .map((p) => p.id)
+    );
+    const votes = room.votes ?? {};
+    const nums: number[] = [];
+    for (const [pid, raw] of Object.entries(votes)) {
+      if (!eligibleIds.has(pid)) continue;
+      const v = (raw ?? '').toString().trim();
+      // Accept numeric strings like 1, 2, 3, 5, 8, 13, 20, 40, 100, also decimals e.g., 0.5
+      if (!/^\d+(?:\.\d+)?$/.test(v)) continue;
+      const n = Number(v);
+      if (!Number.isFinite(n)) continue;
+      nums.push(n);
+    }
+    if (nums.length === 0) return undefined;
+    nums.sort((a, b) => a - b);
+    const round1 = (x: number) => Math.round(x * 10) / 10;
+    const sum = nums.reduce((acc, n) => acc + n, 0);
+    const avg = round1(sum / nums.length);
+    let median: number;
+    const mid = Math.floor(nums.length / 2);
+    if (nums.length % 2 === 1) {
+      median = nums[mid];
+    } else {
+      median = (nums[mid - 1] + nums[mid]) / 2;
+    }
+    median = round1(median);
+    return { avg, median };
   }
 
   private generateId(): string {

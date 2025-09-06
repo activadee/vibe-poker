@@ -19,6 +19,8 @@ export interface Room {
   revealed?: boolean;
   // votes keyed by participant id; values are card identifiers
   votes?: Record<string, string>;
+  // FR-009: Derived statistics when revealed
+  stats?: VoteStats;
 }
 
 // REST contracts
@@ -69,4 +71,12 @@ export interface VoteProgressEvent {
   total: number;
   // ids of participants who have voted (socket ids); used for UI badges
   votedIds: string[];
+}
+
+// FR-009: Vote statistics (computed on the server when revealed)
+export interface VoteStats {
+  // Average of numeric cards, rounded to 1 decimal
+  avg: number;
+  // Median of numeric cards (even -> mean of middle 2), rounded to 1 decimal
+  median: number;
 }

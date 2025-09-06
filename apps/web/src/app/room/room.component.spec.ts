@@ -69,4 +69,30 @@ describe('RoomComponent', () => {
     comp.revealed.set(true);
     expect(comp.hasVoted({ id: 'p1', name: 'Alice', role: 'player' })).toBe(false);
   });
+
+  it('sets stats when revealed room:state includes stats', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    const handlers: Record<string, (arg?: unknown) => void> = {};
+    const fakeSocket = { on: (evt: string, cb: (arg?: unknown) => void) => { handlers[evt] = cb; } } as any;
+    (comp as any).setupSocketListeners(fakeSocket);
+
+    const room = {
+      id: 'ROOM1',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 1000,
+      participants: [],
+      revealed: true,
+      votes: { a: '3', b: '5' },
+      stats: { avg: 4.0, median: 4.0 },
+    };
+    comp.roomId.set('ROOM1');
+    handlers['room:state']?.(room as any);
+    expect(comp.stats()).toEqual({ avg: 4.0, median: 4.0 });
+
+    // If not revealed, stats should clear
+    handlers['room:state']?.({ ...room, revealed: false, stats: undefined } as any);
+    expect(comp.stats()).toBeNull();
+  });
 });

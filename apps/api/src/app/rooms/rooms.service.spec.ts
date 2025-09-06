@@ -74,4 +74,44 @@ describe('RoomsService', () => {
     expect(progress2.total).toBe(2);
     expect(progress2.votedIds.sort()).toEqual(['h1', 'p1']);
   });
+
+  describe('computeStats (FR-009)', () => {
+    it('excludes non-numeric cards and computes avg/median (odd count)', () => {
+      const room = service.create('Host');
+      service.addParticipant(room.id, { id: 'h1', name: 'Host', role: 'host' });
+      service.addParticipant(room.id, { id: 'p1', name: 'Alice', role: 'player' });
+      service.addParticipant(room.id, { id: 'p2', name: 'Bob', role: 'player' });
+
+      // Mix of numeric and non-numeric
+      (room.votes as any) = { h1: '1', p1: '3', p2: '8', xtra: '?', pX: '☕' };
+
+      const stats = service.computeStats(room)!;
+      expect(stats).toBeDefined();
+      expect(stats.avg).toBe(4.0); // (1+3+8)/3 = 4.0
+      expect(stats.median).toBe(3.0); // middle of [1,3,8]
+    });
+
+    it('even count uses mean of middle two and rounds to 1 decimal', () => {
+      const room = service.create('Host');
+      service.addParticipant(room.id, { id: 'h1', name: 'Host', role: 'host' });
+      service.addParticipant(room.id, { id: 'p1', name: 'Alice', role: 'player' });
+      service.addParticipant(room.id, { id: 'p2', name: 'Bob', role: 'player' });
+      service.addParticipant(room.id, { id: 'p3', name: 'Cara', role: 'player' });
+
+      (room.votes as any) = { h1: '5', p1: '8', p2: '13', p3: '13' };
+
+      const stats = service.computeStats(room)!;
+      expect(stats.avg).toBe(9.8); // 39/4 = 9.75 -> 9.8
+      expect(stats.median).toBe(10.5); // (8+13)/2 = 10.5
+    });
+
+    it('returns undefined when no numeric votes', () => {
+      const room = service.create('Host');
+      service.addParticipant(room.id, { id: 'h1', name: 'Host', role: 'host' });
+      service.addParticipant(room.id, { id: 'p1', name: 'Alice', role: 'player' });
+      (room.votes as any) = { h1: '?', p1: '☕' };
+      const stats = service.computeStats(room);
+      expect(stats).toBeUndefined();
+    });
+  });
 });

@@ -40,6 +40,11 @@
       <div class="progress-pill" *ngIf="voteTotal() > 0">
         {{ voteCount() }}/{{ voteTotal() }} voted
       </div>
+      @if (revealed() && stats()) {
+        <div class="results">
+          <div class="stats-pill">Avg {{ stats()!.avg.toFixed(1) }} • Median {{ stats()!.median.toFixed(1) }}</div>
+        </div>
+      }
       <ul>
         @for (p of participants(); track p.id) {
           <li>

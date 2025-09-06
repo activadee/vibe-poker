@@ -225,7 +225,7 @@ describe('RoomsGateway', () => {
     expect(toEmit.mock.calls.some((c: any[]) => c[0] === 'room:state')).toBe(false);
   });
 
-  it('room:state omits votes before reveal and includes after reveal', () => {
+  it('room:state omits votes/stats before reveal and includes votes + stats after reveal', () => {
     const room = makeRoom('ROOMZ');
     room.participants = [
       { id: 'h1', name: 'Hannah', role: 'host' },
@@ -234,6 +234,20 @@ describe('RoomsGateway', () => {
     room.votes = { p1: '5', h1: '8' } as any;
     room.revealed = false;
     rooms.get.mockReturnValue(room);
+    rooms.computeProgress.mockReturnValue({ count: 0, total: 2, votedIds: [] });
+    rooms.castVote.mockImplementation(() => room);
+    rooms.addParticipant.mockImplementation((_id: string, _p: any) => room);
+    rooms.computeStats = jest.fn().mockImplementation((r: Room) => {
+      const nums = Object.values(r.votes ?? {})
+        .map((v) => Number(v))
+        .filter((n) => Number.isFinite(n))
+        .sort((a, b) => a - b);
+      const round1 = (x: number) => Math.round(x * 10) / 10;
+      const mid = Math.floor(nums.length / 2);
+      const median = nums.length % 2 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+      const avg = nums.reduce((a, n) => a + n, 0) / (nums.length || 1);
+      return { avg: round1(avg), median: round1(median) };
+    }) as any;
 
     // Map socket to room as host
     (gateway as any).socketRoom.set('h1', 'ROOMZ');
@@ -244,11 +258,13 @@ describe('RoomsGateway', () => {
     const stateBefore = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
     expect(stateBefore).toBeDefined();
     expect('votes' in stateBefore).toBe(false);
+    expect('stats' in stateBefore).toBe(false);
 
     // Now reveal and expect votes to be present
     gateway.handleVoteReveal({} as any, host);
     const stateAfter = toEmit.mock.calls.filter((c: any[]) => c[0] === 'room:state').pop()?.[1];
     expect(stateAfter).toBeDefined();
     expect(stateAfter.votes).toEqual(room.votes);
+    expect(stateAfter.stats).toEqual({ avg: 6.5, median: 6.5 });
   });
 });

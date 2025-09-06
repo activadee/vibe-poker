@@ -2,7 +2,7 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import type { Room, RoomErrorEvent, VoteProgressEvent, Participant } from '@scrum-poker/shared-types';
+import type { Room, RoomErrorEvent, VoteProgressEvent, Participant, VoteStats } from '@scrum-poker/shared-types';
 import { io, Socket } from 'socket.io-client';
 import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
 
@@ -29,6 +29,8 @@ export class RoomComponent implements OnDestroy {
   story = signal('');
   deckId = signal<'fibonacci' | string>('fibonacci');
   votes = signal<Record<string, string>>({});
+  // FR-009 results stats
+  stats = signal<VoteStats | null>(null);
   // FR-006 progress state
   voteCount = signal(0);
   voteTotal = signal(0);
@@ -104,6 +106,7 @@ export class RoomComponent implements OnDestroy {
       this.story.set(room.story ?? '');
       this.deckId.set(room.deckId ?? 'fibonacci');
       this.votes.set(room.votes ?? {});
+      this.stats.set(room.revealed && room.stats ? room.stats : null);
       this.joined.set(true);
     });
     // FR-006: vote progress stream
