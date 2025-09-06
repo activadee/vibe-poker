@@ -24,3 +24,15 @@ export interface CreateRoomResponse {
   id: string;
   expiresAt: number;
 }
+
+// WebSocket contracts
+export interface RoomJoinPayload {
+  roomId: string;
+  name: string;
+  secret?: string;
+}
+
+export interface RoomErrorEvent {
+  code: 'invalid_payload' | 'invalid_room' | 'forbidden';
+  message: string;
+}

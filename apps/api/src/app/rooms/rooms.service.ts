@@ -80,4 +80,30 @@ export class RoomsService {
     const fallback = Math.random().toString(36).slice(2, 10).toUpperCase();
     return fallback;
   }
+
+  addParticipant(roomId: string, participant: Room['participants'][number]): Room {
+    const room = this.rooms.get(roomId);
+    if (!room) throw new Error('Room not found');
+    // ensure uniqueness by id (socket id)
+    const existingIdx = room.participants.findIndex((p) => p.id === participant.id);
+    if (existingIdx >= 0) {
+      room.participants.splice(existingIdx, 1, participant);
+    } else {
+      room.participants.push(participant);
+    }
+    return room;
+  }
+
+  removeParticipant(roomId: string, participantId: string): Room | undefined {
+    const room = this.rooms.get(roomId);
+    if (!room) return undefined;
+    const before = room.participants.length;
+    room.participants = room.participants.filter((p) => p.id !== participantId);
+    if (before !== room.participants.length) {
+      this.logger.log(
+        JSON.stringify({ event: 'participant_removed', room_id: roomId, participant_id: participantId })
+      );
+    }
+    return room;
+  }
 }

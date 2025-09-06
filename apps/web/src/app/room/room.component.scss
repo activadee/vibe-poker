@@ -3,6 +3,29 @@
   margin: 32px auto;
 }
 
+.join {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  margin: 16px 0 24px;
+}
+
+.join input {
+  display: block;
+  padding: 8px;
+  min-width: 220px;
+}
+
+.btn {
+  padding: 8px 12px;
+}
+
+.btn.primary {
+  background: #1976d2;
+  color: white;
+  border: none;
+}
+
 .link {
   display: flex;
   gap: 8px;
@@ -21,3 +44,25 @@ code {
   color: #2e7d32;
 }
 
+.participants ul {
+  list-style: none;
+  padding: 0;
+}
+
+.participants li {
+  padding: 4px 0;
+}
+
+.participants .role {
+  color: #666;
+  margin-left: 8px;
+  font-size: 0.9em;
+}
+
+.error {
+  background: #ffebee;
+  color: #b71c1c;
+  padding: 12px;
+  border-radius: 4px;
+  margin: 8px 0 16px;
+}

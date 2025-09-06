@@ -1,11 +1,47 @@
 <div class="room">
   <h2>Room {{ roomId() }}</h2>
-  <p>Share this link with your team:</p>
-  <div class="link">
-    <code>{{ url }}</code>
-    <button (click)="copyLink()">Copy Link</button>
-  </div>
-  @if(copied()) {
-  <p class="copied">Link copied!</p>
+
+  @if (error()) {
+    <div class="error">
+      {{ error() }}
+      <div class="actions">
+        <a routerLink="/" class="btn">Create a new room</a>
+      </div>
+    </div>
+  }
+
+  @if (!joined()) {
+    <div class="join">
+      <label>
+        Your name
+        <input [(ngModel)]="name" (keyup.enter)="join()" placeholder="Alice" />
+      </label>
+      <button class="btn primary" (click)="join()">Join Room</button>
+    </div>
+  }
+
+  @if (joined()) {
+    <div class="share">
+      <p>Share this link with your team:</p>
+      <div class="link">
+        <code>{{ url }}</code>
+        <button (click)="copyLink()">Copy Link</button>
+      </div>
+      @if(copied()) {
+        <p class="copied">Link copied!</p>
+      }
+    </div>
+
+    <div class="participants">
+      <h3>Participants</h3>
+      <ul>
+        @for (p of participants(); track p.id) {
+          <li>
+            <span class="name">{{ p.name }}</span>
+            <span class="role">{{ p.role }}</span>
+          </li>
+        }
+      </ul>
+    </div>
   }
 </div>
