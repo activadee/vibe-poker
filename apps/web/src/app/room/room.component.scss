@@ -112,3 +112,28 @@ code {
   border-radius: 4px;
   margin: 8px 0 16px;
 }
+
+.story {
+  margin: 12px 0 18px;
+}
+
+.story-editor {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.story-editor input,
+.story-editor textarea {
+  width: 100%;
+  padding: 8px;
+}
+
+.story-view .title {
+  font-weight: 600;
+}
+
+.story-view .notes {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}

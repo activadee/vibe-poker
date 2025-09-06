@@ -1,5 +1,5 @@
 // WebSocket event and payload contracts
-import type { DeckId } from './domain';
+import type { DeckId, Story } from './domain';
 
 export interface RoomJoinPayload {
   roomId: string;
@@ -23,7 +23,7 @@ export type VoteResetPayload = Record<string, never>;
 export type VoteRevealPayload = Record<string, never>;
 
 export interface StorySetPayload {
-  story: string;
+  story: Story;
 }
 
 export interface DeckSetPayload {
@@ -39,4 +39,3 @@ export interface VoteProgressEvent {
   // ids of participants who have voted (socket ids); used for UI badges
   votedIds: string[];
 }
-

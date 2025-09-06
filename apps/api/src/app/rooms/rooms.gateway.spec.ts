@@ -255,7 +255,7 @@ describe('RoomsGateway', () => {
     const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
 
     // Trigger a state broadcast via story:set (host-only)
-    gateway.handleStorySet({ story: 'XYZ' } as any, host);
+    gateway.handleStorySet({ story: { id: 'S-x', title: 'XYZ' } } as any, host);
     const stateBefore = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
     expect(stateBefore).toBeDefined();
     expect('votes' in stateBefore).toBe(false);
@@ -327,5 +327,48 @@ describe('RoomsGateway', () => {
     // Should not broadcast to room
     const toMock = (gateway as any).server.to as jest.Mock;
     expect(toMock).not.toHaveBeenCalledWith('room:ROOMR2');
+  });
+
+  it('non-host cannot set story', () => {
+    const room = makeRoom('ROOMS');
+    room.participants = [
+      { id: 'p1', name: 'Paula', role: 'player' },
+    ];
+    rooms.get.mockReturnValue(room);
+    (gateway as any).socketRoom.set('p1', 'ROOMS');
+    const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
+
+    gateway.handleStorySet({ story: { id: 'S-1', title: 'A' } } as any, client);
+
+    expect(client.emit).toHaveBeenCalledWith(
+      'room:error',
+      expect.objectContaining({ code: 'forbidden' })
+    );
+    const toMock = (gateway as any).server.to as jest.Mock;
+    expect(toMock).not.toHaveBeenCalledWith('room:ROOMS');
+  });
+
+  it('story:set validates payload and broadcasts on success', () => {
+    const room = makeRoom('ROOMS2');
+    room.participants = [
+      { id: 'h1', name: 'Hannah', role: 'host' },
+    ];
+    rooms.get.mockReturnValue(room);
+    (gateway as any).socketRoom.set('h1', 'ROOMS2');
+    const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
+
+    // invalid: empty title
+    gateway.handleStorySet({ story: { id: 'S-1', title: '' } } as any, host);
+    expect(host.emit).toHaveBeenCalledWith(
+      'room:error',
+      expect.objectContaining({ code: 'invalid_payload' })
+    );
+
+    // valid
+    gateway.handleStorySet({ story: { id: 'S-1', title: 'Feature A', notes: 'Some notes' } } as any, host);
+    const toMock = (gateway as any).server.to as jest.Mock;
+    expect(toMock).toHaveBeenCalledWith('room:ROOMS2');
+    const state = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
+    expect(state.story).toEqual({ id: 'S-1', title: 'Feature A', notes: 'Some notes' });
   });
 });

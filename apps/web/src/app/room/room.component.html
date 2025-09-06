@@ -21,6 +21,31 @@
   }
 
   @if (joined()) {
+    <div class="story">
+      <h3>Current Story</h3>
+      @if (myRole() === 'host') {
+        <div class="story-editor">
+          <label>
+            Title
+            <input [(ngModel)]="storyTitleModel" placeholder="Enter story title" />
+          </label>
+          <label>
+            Notes
+            <textarea [(ngModel)]="storyNotesModel" rows="3" placeholder="Optional notes"></textarea>
+          </label>
+          <div class="actions">
+            <button class="btn" [disabled]="!storyTitleModel.trim()" (click)="saveStory()">Save</button>
+          </div>
+        </div>
+      } @else {
+        <div class="story-view">
+          <div class="title">{{ (story()?.title || '—') }}</div>
+          @if (story()?.notes) {
+            <pre class="notes">{{ story()?.notes }}</pre>
+          }
+        </div>
+      }
+    </div>
     <div class="room-actions">
       <button class="btn secondary" (click)="leave()">Leave Room</button>
     </div>
