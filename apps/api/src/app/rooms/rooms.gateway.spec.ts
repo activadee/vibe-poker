@@ -114,4 +114,70 @@ describe('RoomsGateway', () => {
     const toMock = (gateway as any).server.to as jest.Mock;
     expect(toMock).not.toHaveBeenCalled();
   });
+
+  it('host disconnect inserts placeholder to preserve host on reload', () => {
+    const room = makeRoom('ROOMH');
+    room.participants = [
+      { id: 'host-sock', name: 'Hannah', role: 'host' },
+    ];
+    rooms.get.mockReturnValue(room);
+    rooms.removeParticipant.mockImplementation((_roomId: string, pid: string) => {
+      room.participants = room.participants.filter((p) => p.id !== pid);
+      return room;
+    });
+    rooms.addParticipant.mockImplementation((_roomId: string, p: any) => {
+      // mimic service behavior of replacing host entries
+      room.participants = room.participants.filter((x) => x.role !== 'host');
+      room.participants.push(p);
+      return room;
+    });
+
+    const client: any = { id: 'host-sock', join: jest.fn(), emit: jest.fn() };
+    // Map socket to room and disconnect
+    (gateway as any).socketRoom.set('host-sock', 'ROOMH');
+    gateway.handleDisconnect(client);
+
+    expect(rooms.removeParticipant).toHaveBeenCalledWith('ROOMH', 'host-sock');
+    expect(rooms.addParticipant).toHaveBeenCalledWith('ROOMH', { id: 'host', name: 'Hannah', role: 'host' });
+  });
+
+  it('observer cannot cast vote', () => {
+    const room = makeRoom('ROOM1');
+    room.participants = [
+      { id: 'obs', name: 'Olivia', role: 'observer' },
+    ];
+    rooms.get.mockReturnValue(room);
+    const client: any = { id: 'obs', join: jest.fn(), emit: jest.fn() };
+    // Map socket to room without going through join (role would be player otherwise)
+    (gateway as any).socketRoom.set('obs', 'ROOM1');
+
+    gateway.handleVoteCast({ value: '5' } as any, client);
+
+    // Should emit forbidden error and not broadcast state
+    expect(client.emit).toHaveBeenCalledWith(
+      'room:error',
+      expect.objectContaining({ code: 'forbidden' })
+    );
+    const toMock = (gateway as any).server.to as jest.Mock;
+    expect(toMock).not.toHaveBeenCalledWith('room:ROOM1');
+  });
+
+  it('non-host cannot reveal', () => {
+    const room = makeRoom('ROOMX');
+    room.participants = [
+      { id: 'p1', name: 'Paula', role: 'player' },
+    ];
+    rooms.get.mockReturnValue(room);
+    const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
+    (gateway as any).socketRoom.set('p1', 'ROOMX');
+
+    gateway.handleVoteReveal({} as any, client);
+
+    expect(client.emit).toHaveBeenCalledWith(
+      'room:error',
+      expect.objectContaining({ code: 'forbidden' })
+    );
+    const toMock = (gateway as any).server.to as jest.Mock;
+    expect(toMock).not.toHaveBeenCalledWith('room:ROOMX');
+  });
 });

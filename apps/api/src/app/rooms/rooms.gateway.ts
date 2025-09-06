@@ -14,6 +14,11 @@ import type {
   Room,
   RoomJoinPayload,
   RoomErrorEvent,
+  VoteCastPayload,
+  VoteRevealPayload,
+  VoteResetPayload,
+  StorySetPayload,
+  DeckSetPayload,
 } from '@scrum-poker/shared-types';
 
 @Injectable()
@@ -38,6 +43,24 @@ export class RoomsGateway implements OnGatewayDisconnect {
 
   private roomKey(roomId: string): string {
     return `room:${roomId}`;
+  }
+
+  private getContext(client: Socket): { roomId: string; room: Room; me: Participant } | undefined {
+    const roomId = this.socketRoom.get(client.id);
+    if (!roomId) return undefined;
+    const room = this.rooms.get(roomId);
+    if (!room) return undefined;
+    const me = room.participants.find((p) => p.id === client.id);
+    if (!me) return undefined;
+    return { roomId, room, me };
+  }
+
+  private isHost(p?: Participant) {
+    return p?.role === 'host';
+  }
+
+  private isPlayer(p?: Participant) {
+    return p?.role === 'player' || p?.role === 'host';
   }
 
   @SubscribeMessage('room:join')
@@ -72,10 +95,12 @@ export class RoomsGateway implements OnGatewayDisconnect {
     this.socketRoom.set(client.id, roomId);
 
     // Add participant (allow duplicate names; socket.id is unique)
+    // If the room contains a placeholder host entry matching the name, elevate to host
+    const shouldBeHost = !!room.participants.find((p) => p.role === 'host' && p.name === name);
     const participant: Participant = {
       id: client.id,
       name,
-      role: 'player',
+      role: shouldBeHost ? 'host' : 'player',
     };
     const updated = this.rooms.addParticipant(roomId, participant);
     this.logEvent({ event: 'room_join', room_id: roomId, name, socket_id: client.id });
@@ -85,12 +110,123 @@ export class RoomsGateway implements OnGatewayDisconnect {
   }
 
   handleDisconnect(client: Socket) {
-    const roomId = this.socketRoom.get(client.id);
+    const ctx = this.getContext(client);
+    const roomId = ctx?.roomId ?? this.socketRoom.get(client.id);
     if (!roomId) return;
     this.socketRoom.delete(client.id);
+    const wasHost = ctx?.me.role === 'host';
+    const hostName = ctx?.me.name ?? '';
     const room = this.rooms.removeParticipant(roomId, client.id);
     if (!room) return;
+    // Preserve host role across reloads by keeping a placeholder host by name
+    if (wasHost && hostName) {
+      this.rooms.addParticipant(roomId, { id: 'host', name: hostName, role: 'host' });
+    }
     this.logEvent({ event: 'room_leave', room_id: roomId, socket_id: client.id });
+    this.server.to(this.roomKey(roomId)).emit('room:state', room);
+  }
+
+  @SubscribeMessage('vote:cast')
+  handleVoteCast(
+    @MessageBody() payload: VoteCastPayload,
+    @ConnectedSocket() client: Socket
+  ) {
+    const ctx = this.getContext(client);
+    if (!ctx) return;
+    const { roomId, room, me } = ctx;
+    if (!this.isPlayer(me)) {
+      const err: RoomErrorEvent = { code: 'forbidden', message: 'Observers cannot vote' };
+      client.emit('room:error', err);
+      this.logEvent({ event: 'auth_forbidden', action: 'vote:cast', room_id: roomId, socket_id: client.id, role: me.role });
+      return; // safely ignore
+    }
+    const value = (payload?.value ?? '').toString();
+    if (!value) return; // ignore invalid
+    // Lazy-init votes map
+    const votes = room.votes ?? (room.votes = {});
+    votes[client.id] = value;
+    this.logEvent({ event: 'vote_cast', room_id: roomId, socket_id: client.id });
+    // Do not broadcast votes before reveal to keep them secret.
+  }
+
+  @SubscribeMessage('vote:reveal')
+  handleVoteReveal(
+    @MessageBody() _payload: VoteRevealPayload,
+    @ConnectedSocket() client: Socket
+  ) {
+    const ctx = this.getContext(client);
+    if (!ctx) return;
+    const { roomId, room, me } = ctx;
+    if (!this.isHost(me)) {
+      const err: RoomErrorEvent = { code: 'forbidden', message: 'Only host can reveal votes' };
+      client.emit('room:error', err);
+      this.logEvent({ event: 'auth_forbidden', action: 'vote:reveal', room_id: roomId, socket_id: client.id, role: me.role });
+      return;
+    }
+    room.revealed = true;
+    this.logEvent({ event: 'vote_reveal', room_id: roomId, socket_id: client.id });
+    this.server.to(this.roomKey(roomId)).emit('room:state', room);
+  }
+
+  @SubscribeMessage('vote:reset')
+  handleVoteReset(
+    @MessageBody() _payload: VoteResetPayload,
+    @ConnectedSocket() client: Socket
+  ) {
+    const ctx = this.getContext(client);
+    if (!ctx) return;
+    const { roomId, room, me } = ctx;
+    if (!this.isHost(me)) {
+      const err: RoomErrorEvent = { code: 'forbidden', message: 'Only host can reset votes' };
+      client.emit('room:error', err);
+      this.logEvent({ event: 'auth_forbidden', action: 'vote:reset', room_id: roomId, socket_id: client.id, role: me.role });
+      return;
+    }
+    room.revealed = false;
+    room.votes = {};
+    this.logEvent({ event: 'vote_reset', room_id: roomId, socket_id: client.id });
+    this.server.to(this.roomKey(roomId)).emit('room:state', room);
+  }
+
+  @SubscribeMessage('story:set')
+  handleStorySet(
+    @MessageBody() payload: StorySetPayload,
+    @ConnectedSocket() client: Socket
+  ) {
+    const ctx = this.getContext(client);
+    if (!ctx) return;
+    const { roomId, room, me } = ctx;
+    if (!this.isHost(me)) {
+      const err: RoomErrorEvent = { code: 'forbidden', message: 'Only host can set story' };
+      client.emit('room:error', err);
+      this.logEvent({ event: 'auth_forbidden', action: 'story:set', room_id: roomId, socket_id: client.id, role: me.role });
+      return;
+    }
+    const story = (payload?.story ?? '').trim();
+    room.story = story;
+    this.logEvent({ event: 'story_set', room_id: roomId, socket_id: client.id });
+    this.server.to(this.roomKey(roomId)).emit('room:state', room);
+  }
+
+  @SubscribeMessage('deck:set')
+  handleDeckSet(
+    @MessageBody() payload: DeckSetPayload,
+    @ConnectedSocket() client: Socket
+  ) {
+    const ctx = this.getContext(client);
+    if (!ctx) return;
+    const { roomId, room, me } = ctx;
+    if (!this.isHost(me)) {
+      const err: RoomErrorEvent = { code: 'forbidden', message: 'Only host can change deck' };
+      client.emit('room:error', err);
+      this.logEvent({ event: 'auth_forbidden', action: 'deck:set', room_id: roomId, socket_id: client.id, role: me.role });
+      return;
+    }
+    const deckId = payload?.deckId ?? 'fibonacci';
+    room.deckId = deckId;
+    // Reset votes when deck changes
+    room.votes = {};
+    this.logEvent({ event: 'deck_set', room_id: roomId, socket_id: client.id, deck: deckId });
     this.server.to(this.roomKey(roomId)).emit('room:state', room);
   }
 }

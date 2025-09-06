@@ -87,6 +87,10 @@ export class RoomsService {
   addParticipant(roomId: string, participant: Room['participants'][number]): Room {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('Room not found');
+    // If a real client claims host role, replace any placeholder host
+    if (participant.role === 'host') {
+      room.participants = room.participants.filter((p) => p.role !== 'host');
+    }
     // ensure uniqueness by id (socket id)
     const existingIdx = room.participants.findIndex((p) => p.id === participant.id);
     if (existingIdx >= 0) {

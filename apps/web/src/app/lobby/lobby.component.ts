@@ -37,6 +37,7 @@ export class LobbyComponent {
         )
       );
       if (res?.id) {
+        try { localStorage.setItem('displayName', hostName); } catch (err) { console.warn('localStorage unavailable', err); }
         this.router.navigate(['/r', res.id]);
       } else {
         this.error.set('Unexpected response from server');

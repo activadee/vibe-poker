@@ -42,9 +42,35 @@
           <li>
             <span class="name">{{ p.name }}</span>
             <span class="role">{{ p.role }}</span>
+            <span class="vote" *ngIf="revealed(); else hiddenVote">{{ votes()[p.id] ?? '—' }}</span>
+            <ng-template #hiddenVote>
+              <span class="vote muted">—</span>
+            </ng-template>
           </li>
         }
       </ul>
     </div>
+
+    <div class="voting">
+      <h3>Vote</h3>
+      <div class="deck">
+        @for (c of deck; track c) {
+          <button class="card" [disabled]="myRole() === 'observer'" (click)="castVote(c)">{{ c }}</button>
+        }
+      </div>
+      @if (myRole() === 'observer') {
+        <p class="hint">Observers cannot vote</p>
+      }
+    </div>
+
+    @if (myRole() === 'host') {
+      <div class="host-controls">
+        <h3>Host Controls</h3>
+        <div class="controls">
+          <button class="btn primary" (click)="reveal()">Reveal</button>
+          <button class="btn" (click)="resetVotes()">Reset</button>
+        </div>
+      </div>
+    }
   }
 </div>
