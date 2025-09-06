@@ -56,9 +56,11 @@ export class RoomComponent implements OnDestroy {
       const saved = localStorage.getItem('displayName') ?? '';
       if (saved) {
         this.name = saved;
-        // defer join slightly to allow view to settle
-        setTimeout(() => this.join(), 0);
       }
+      // Apply role preference from query param if present
+      const role = this.route.snapshot.queryParamMap.get('role');
+      this.joinAsObserver = role === 'observer';
+      // Do not auto-join: allow user to confirm role before joining
     });
   }
 
