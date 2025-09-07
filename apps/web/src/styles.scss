@@ -4,7 +4,20 @@
 
 /* Global tokens and light background inspired by the reference design */
 :root {
+  /* Sizing */
+  --touch-target: 44px;
   --radius: 12px;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Grid tokens */
+  --card-min: 68px; /* minimum card column size in vote grid */
 }
 
 html,

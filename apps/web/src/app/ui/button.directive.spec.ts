@@ -65,5 +65,12 @@ describe('UiButtonDirective', () => {
     expect(lg.className).toContain('h-11');
     expect(lg.className).toContain('px-5');
   });
-});
 
+  it('enforces a minimum 44px touch target via inline style', () => {
+    const fixture = TestBed.configureTestingModule({ imports: [HostComponent] }).createComponent(HostComponent);
+    fixture.detectChanges();
+    const btns = fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>;
+    const def = btns[0];
+    expect(def.style.minHeight).toBe('var(--touch-target, 44px)');
+  });
+});

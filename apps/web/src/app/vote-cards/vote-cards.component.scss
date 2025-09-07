@@ -1,16 +1,16 @@
 .deck {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--card-min, 68px), 1fr));
+  gap: var(--space-2, 8px);
+  margin: var(--space-3, 12px) 0;
 }
 
 .card {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 8px 12px;
+  min-width: var(--touch-target, 44px);
+  min-height: var(--touch-target, 44px);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: var(--radius, 12px);
   background: white;
   cursor: pointer;
 }
@@ -40,4 +40,3 @@
   margin: 4px 0 0;
   font-size: 12px;
 }
-

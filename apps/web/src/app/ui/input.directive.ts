@@ -15,4 +15,10 @@ export class UiInputDirective {
       'disabled:opacity-50'
     ].join(' ');
   }
+
+  // Ensure touch target height for text-like controls
+  @HostBinding('style.minHeight')
+  get minHeight(): string {
+    return 'var(--touch-target, 44px)';
+  }
 }
