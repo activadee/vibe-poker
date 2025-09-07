@@ -396,7 +396,7 @@ describe('RoomComponent (FR-017 Deck presets)', () => {
     // Ensure VoteCards is present and has default Fibonacci values
     const vcDE = fixture.debugElement.query(By.directive(VoteCardsComponent));
     const vc = vcDE.componentInstance as VoteCardsComponent;
-    expect(vc.values).toEqual(['1', '2', '3', '5', '8', '13', '21', '?', '☕']);
+    expect(vc.values()).toEqual(['1', '2', '3', '5', '8', '13', '21', '?', '☕']);
 
     // Simulate a selection
     vc.selected.set('5');
@@ -414,7 +414,7 @@ describe('RoomComponent (FR-017 Deck presets)', () => {
     fixture.detectChanges();
 
     // Values should switch to T-Shirt preset
-    expect(vc.values).toEqual(['XS', 'S', 'M', 'L', 'XL', '?', '☕']);
+    expect(vc.values()).toEqual(['XS', 'S', 'M', 'L', 'XL', '?', '☕']);
     // Local selection should be cleared
     expect(vc.selected()).toBeNull();
   });

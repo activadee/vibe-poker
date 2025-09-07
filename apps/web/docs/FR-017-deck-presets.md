@@ -21,7 +21,9 @@ Implementation
   - `deckId` is part of room state; `deckValues()` maps it to the card list.
   - Host action `changeDeck(deckId)` emits the socket event.
   - In `room:state`, if `deckId` changes, clears local selection via `VoteCardsComponent.clearSelection()`.
-- Vote cards: `apps/web/src/app/vote-cards/vote-cards.component.ts` already supports a `values` input; the room now passes the preset values.
+- Vote cards: `apps/web/src/app/vote-cards/vote-cards.component.ts`
+  - Uses Angular input signals for `values` and `disabled` to react instantly to changes: `values = input<string[]>(...)`, `disabled = input<boolean>(false)`.
+  - The deck preset `[values]` binding from the room updates the rendered cards without reload.
 
 Tests
 - Added to `apps/web/src/app/room/room.component.spec.ts`:

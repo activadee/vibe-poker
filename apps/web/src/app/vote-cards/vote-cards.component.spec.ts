@@ -29,8 +29,8 @@ describe('VoteCardsComponent', () => {
     ).map((b) => b.textContent?.trim());
     expect(btns).toEqual(['1', '2', '3', '5', '8', '13', '21', '?', '☕']);
 
-    // Change to T-Shirt sizes
-    component.values = ['XS', 'S', 'M', 'L', 'XL', '?', '☕'];
+    // Change to T-Shirt sizes via input API
+    fixture.componentRef.setInput('values', ['XS', 'S', 'M', 'L', 'XL', '?', '☕']);
     fixture.detectChanges();
 
     btns = Array.from(
@@ -76,7 +76,7 @@ describe('VoteCardsComponent', () => {
   it('does not emit when disabled', () => {
     const spy = jest.fn();
     component.valueSelected.subscribe(spy);
-    component.disabled = true;
+    fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();
 
     const any = fixture.nativeElement.querySelector('button.card') as HTMLButtonElement;
@@ -86,7 +86,7 @@ describe('VoteCardsComponent', () => {
   });
 
   it('shows tooltip and hint when disabled', () => {
-    component.disabled = true;
+    fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();
 
     const btn = fixture.nativeElement.querySelector('button.card') as HTMLButtonElement;
