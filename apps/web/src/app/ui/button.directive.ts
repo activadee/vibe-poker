@@ -35,12 +35,18 @@ export class UiButtonDirective {
       ? 'h-9 px-3 text-sm'
       : this.size === 'lg'
       ? 'h-11 px-5 text-base'
-      : 'h-10 px-4 text-sm';
+      : 'h-11 px-4 text-sm';
     const variant = this.variant === 'secondary'
       ? 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 focus-visible:outline-primary-600'
       : this.variant === 'ghost'
       ? 'bg-transparent text-slate-700 hover:bg-slate-100 focus-visible:outline-primary-600'
       : 'bg-primary-900 text-white hover:bg-primary-800 focus-visible:outline-primary-700';
     return [...base, size, variant].join(' ');
+  }
+
+  // Ensure WCAG touch target guidance (>= 44px) regardless of size classes.
+  @HostBinding('style.minHeight')
+  get minHeight(): string {
+    return 'var(--touch-target, 44px)';
   }
 }
