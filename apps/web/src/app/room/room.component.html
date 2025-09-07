@@ -101,8 +101,17 @@
       <div class="host-controls">
         <h3>Host Controls</h3>
         <div class="controls">
-          <button class="btn primary" (click)="reveal()">Reveal</button>
-          <button class="btn" (click)="resetVotes()">Reset</button>
+          @if (!revealed()) {
+            <ng-container>
+              <button class="btn primary" (click)="reveal()">Reveal</button>
+              <button class="btn" (click)="resetVotes()">Reset</button>
+            </ng-container>
+          } @else {
+            <ng-container>
+              <!-- FR-014: After reveal show prominent Revote CTA -->
+              <button class="btn primary" (click)="revote()">Revote</button>
+            </ng-container>
+          }
         </div>
       </div>
     }

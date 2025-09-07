@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -14,6 +14,7 @@ import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
   styleUrls: ['./room.component.scss'],
 })
 export class RoomComponent implements OnDestroy {
+  @ViewChild(VoteCardsComponent) private cards?: VoteCardsComponent;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -179,6 +180,12 @@ export class RoomComponent implements OnDestroy {
     socket.emit('vote:reset', {});
   }
 
+  revote() {
+    // Clear local selection highlight immediately to avoid stale UI
+    this.cards?.clearSelection();
+    const socket = this.connect();
+    socket.emit('vote:reset', {});
+  }
   private genStoryId(): string {
     return `S-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   }

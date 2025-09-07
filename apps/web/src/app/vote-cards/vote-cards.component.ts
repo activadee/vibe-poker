@@ -55,4 +55,9 @@ export class VoteCardsComponent {
       next?.focus();
     }
   }
+
+  // Clear local selection highlight (used on revote)
+  clearSelection() {
+    this.selected.set(null);
+  }
 }
