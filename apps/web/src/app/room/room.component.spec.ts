@@ -181,6 +181,25 @@ describe('RoomComponent (FR-014 Revote)', () => {
     expect(lastSocket.emit).toHaveBeenCalledWith('vote:reset', {});
   });
 
+  it('copyLink writes a formatted invite with observer and user URLs', async () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+    comp.roomId.set('ROOM9');
+
+    // Stub clipboard API
+    (global as any).navigator = (global as any).navigator || {};
+    (global as any).navigator.clipboard = {
+      writeText: jest.fn().mockResolvedValue(undefined),
+    };
+
+    await comp.copyLink();
+
+    const calledWith: string = (navigator as any).clipboard.writeText.mock.calls[0][0];
+    expect(calledWith).toContain('Join this room:');
+    expect(calledWith).toContain('Join as observer: http://localhost/r/ROOM9?role=observer');
+    expect(calledWith).toContain('Join as user: http://localhost/r/ROOM9?role=player');
+  });
+
   it('revote clears local card selection highlight', () => {
     // Arrange: simulate a prior selection in VoteCards
     component.joined.set(true);

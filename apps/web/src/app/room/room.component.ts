@@ -29,7 +29,10 @@ export class RoomComponent implements OnDestroy {
 
   roomId = signal<string>('');
   copied = signal(false);
+  // Base URL for sharing; we expose explicit role variants instead of a bare URL
   url = '';
+  readonly shareUrlObserver = computed(() => this.buildShareUrl('observer'));
+  readonly shareUrlPlayer = computed(() => this.buildShareUrl('player'));
 
   name = '';
   // Join preferences
@@ -171,7 +174,12 @@ export class RoomComponent implements OnDestroy {
   }
 
   async copyLink() {
-    await navigator.clipboard.writeText(this.url);
+    const invite = [
+      'Join this room:',
+      `Join as observer: ${this.shareUrlObserver()}`,
+      `Join as user: ${this.shareUrlPlayer()}`,
+    ].join('\n');
+    await navigator.clipboard.writeText(invite);
     this.copied.set(true);
     setTimeout(() => this.copied.set(false), 1500);
   }
@@ -243,5 +251,12 @@ export class RoomComponent implements OnDestroy {
     if (this.myRole() !== 'host') return;
     const socket = this.connect();
     socket.emit('deck:set', { deckId });
+  }
+
+  private buildShareUrl(role: 'observer' | 'player'): string {
+    const origin = typeof location !== 'undefined' ? location.origin : '';
+    const base = `${origin}/r/${encodeURIComponent(this.roomId())}`;
+    const query = `role=${encodeURIComponent(role)}`;
+    return `${base}?${query}`;
   }
 }
