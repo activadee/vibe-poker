@@ -32,7 +32,7 @@ describe('LobbyComponent', () => {
 
     await promise;
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ABCD-1234']);
+    expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ABCD-1234'], { queryParams: { host: '1' } });
   });
 
   it('renders headings and buttons with design classes', () => {

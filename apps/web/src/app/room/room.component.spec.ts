@@ -90,6 +90,28 @@ describe('RoomComponent (FR-014 Revote)', () => {
     jest.useRealTimers();
   });
 
+  it('auto-joins as host when arriving from Create Room (host=1)', () => {
+    jest.useFakeTimers();
+    // Arrange: simulate saved host name and host flag in query
+    localStorage.setItem('displayName', 'Hosty');
+    const ar = TestBed.inject(ActivatedRoute) as any;
+    ar.snapshot = { queryParamMap: convertToParamMap({ host: '1' }) };
+
+    // Update params to trigger constructor subscription
+    paramMap$.next(convertToParamMap({ roomId: 'ROOMX' }));
+
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+    const joinSpy = jest.spyOn(comp, 'join').mockImplementation(() => undefined);
+
+    // Detect changes and allow any scheduled timers (setTimeout) to run
+    fixture.detectChanges();
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+
+    expect(joinSpy).toHaveBeenCalled();
+  });
+
   it('does not open join modal when role=player is present', () => {
     localStorage.removeItem('displayName');
     // Inject role=player into route snapshot

@@ -51,8 +51,13 @@ export class LobbyComponent {
         )
       );
       if (res?.id) {
-        try { localStorage.setItem('displayName', hostName); } catch (err) { console.warn('localStorage unavailable', err); }
-        this.router.navigate(['/r', res.id]);
+        try {
+          localStorage.setItem('displayName', hostName);
+        } catch (err) {
+          console.warn('localStorage unavailable', err);
+        }
+        // Navigate with a flag so the room view can auto-join the host
+        this.router.navigate(['/r', res.id], { queryParams: { host: '1' } });
       } else {
         this.error.set('Unexpected response from server');
       }
