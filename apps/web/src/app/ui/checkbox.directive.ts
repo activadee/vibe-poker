@@ -1,7 +1,8 @@
 import { Directive, HostBinding } from '@angular/core';
 
 @Directive({
-  selector: 'input[type=checkbox][appUiCheckbox]'
+  selector: 'input[type=checkbox][appUiCheckbox]',
+  standalone: true
 })
 export class UiCheckboxDirective {
   @HostBinding('class')

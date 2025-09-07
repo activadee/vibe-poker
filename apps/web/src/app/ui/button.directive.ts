@@ -4,7 +4,8 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 @Directive({
-  selector: 'button[appUiButton], a[appUiButton]'
+  selector: 'button[appUiButton], a[appUiButton]',
+  standalone: true
 })
 export class UiButtonDirective {
   private _variant: ButtonVariant = 'primary';
