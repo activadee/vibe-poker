@@ -2,19 +2,16 @@ Title: FR-021 — Optimized join flow via modal
 
 Summary
 - Present a modal to capture the user’s display name and whether to join as an observer when deep‑linking into a room.
-- Only show the modal if all of the following are true:
-  - No username is found in local storage.
-  - The current user is not the host (implicit before joining).
-  - The URL does not include an explicit `role=player|observer` query param.
+- Always show the modal when no display name is saved, regardless of URL params.
 
 Details
 - Route: `/r/:roomId` remains unchanged.
 - Detection: On entering the room route, `RoomComponent` checks `localStorage.displayName` and the `role` query param.
-  - If `role=observer`, the observer checkbox is preselected and the modal is suppressed.
-  - If `role=player`, the modal is suppressed.
-  - Otherwise, and if no saved username exists, the join modal opens.
-Backward compatibility
-- If older links use `role=player`, they behave as the explicit voter role and suppress the modal as expected.
+  - If `role=observer`, the observer checkbox is preselected.
+  - If `role=player`, the player role is assumed.
+  - If no saved username exists, the join modal opens (even for explicit role links) so first‑time visitors can enter a name.
+Notes
+- Explicit role links still preselect role; they no longer suppress the join modal when the user has no saved name.
 
 Implementation
 - UI: A lightweight modal overlay is rendered from `RoomComponent` (`.modal-backdrop` + `.modal`).
@@ -31,4 +28,4 @@ Tests
 - Added expectations for the `role=player` share and lobby links.
 
 User Notes
-- If you already saved your name on this device or join via a link with `?role=player` or `?role=observer`, the modal will not appear.
+- If you already saved your name on this device, the app auto‑joins. Otherwise, the modal appears for name entry.

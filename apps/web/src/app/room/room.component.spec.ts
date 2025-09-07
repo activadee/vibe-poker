@@ -110,7 +110,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
     expect(joinSpy).toHaveBeenCalled();
   });
 
-  it('does not open join modal when role=player is present', () => {
+  it('opens join modal when role=player is present but no saved name', () => {
     localStorage.removeItem('displayName');
     // Inject role=player into route snapshot
     const ar = TestBed.inject(ActivatedRoute) as any;
@@ -122,10 +122,10 @@ describe('RoomComponent (FR-014 Revote)', () => {
     fixture.detectChanges();
 
     const modal = fixture.nativeElement.querySelector('.modal-backdrop');
-    expect(modal).toBeFalsy();
+    expect(modal).toBeTruthy();
   });
 
-  it('does not open join modal when role=observer is present', () => {
+  it('opens join modal when role=observer is present but no saved name', () => {
     localStorage.removeItem('displayName');
     // Inject role=observer into route snapshot
     const ar = TestBed.inject(ActivatedRoute) as any;
@@ -137,7 +137,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
     fixture.detectChanges();
 
     const modal = fixture.nativeElement.querySelector('.modal-backdrop');
-    expect(modal).toBeFalsy();
+    expect(modal).toBeTruthy();
   });
 
   it('shows invalid room error and CTA when room:error received', () => {

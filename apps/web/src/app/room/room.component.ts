@@ -84,15 +84,12 @@ export class RoomComponent implements OnDestroy {
       // Apply role preference from query param if present
       const qp = this.route.snapshot.queryParamMap;
       const role = qp.get('role');
-      const createdHost = qp.get('host') === '1';
       this.joinAsObserver = role === 'observer';
-      // Decide whether to open the join modal per requirements:
-      // Only when no saved username, not host (implicit pre-join), and role param is not 'player' or 'observer'.
-      const explicitRole = role === 'player' || role === 'observer';
-      const shouldShowModal = !saved && !explicitRole;
+      // Show modal whenever no saved name exists, regardless of role
+      const shouldShowModal = !saved;
       this.showJoinModal.set(shouldShowModal);
-      // Auto-join when a saved name exists (host or player/observer). Host is elevated by server.
-      if (saved && !shouldShowModal) {
+      // Auto-join when a saved name exists (host/player/observer). Host elevation handled server-side.
+      if (!shouldShowModal) {
         setTimeout(() => this.join());
       }
     });
