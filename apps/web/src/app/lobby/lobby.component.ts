@@ -5,11 +5,15 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CreateRoomResponse, CreateRoomRequest } from '@scrum-poker/shared-types';
 import { firstValueFrom } from 'rxjs';
+import { UiButtonDirective } from '../ui/button.directive';
+import { UiInputDirective } from '../ui/input.directive';
+import { UiCheckboxDirective } from '../ui/checkbox.directive';
+import { UiCardComponent } from '../ui/card/card.component';
 
 @Component({
   selector: 'app-lobby',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UiButtonDirective, UiInputDirective, UiCheckboxDirective, UiCardComponent],
   templateUrl: './lobby.component.html',
   styleUrls: ['./lobby.component.scss'],
 })

@@ -6,19 +6,13 @@
 
 section { margin-bottom: 24px; }
 
-label {
-  display: block;
-  font-weight: 600;
-}
+label { font-weight: 600; }
 
-input {
+/* Limit full-width rule to text-like inputs only to avoid stretching checkboxes */
+input:not([type='checkbox']) {
   width: 100%;
   padding: 8px;
   margin: 8px 0;
-}
-
-button {
-  padding: 8px 12px;
 }
 
 .muted { color: #666; font-size: 12px; }
