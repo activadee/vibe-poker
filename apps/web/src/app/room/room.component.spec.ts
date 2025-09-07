@@ -59,7 +59,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
     component.participants.set([{ id: 'host-sock', name: 'Host', role: 'host' }]);
   });
 
-  it('deep-link without saved name shows join prompt', () => {
+  it('deep-link without saved name opens join modal', () => {
     // Ensure no saved name
     localStorage.removeItem('displayName');
     paramMap$.next(convertToParamMap({ roomId: 'ROOM1' }));
@@ -67,27 +67,77 @@ describe('RoomComponent (FR-014 Revote)', () => {
     const fixture = TestBed.createComponent(RoomComponent);
     fixture.detectChanges();
 
-    const joinSection = fixture.nativeElement.querySelector('.join');
-    expect(joinSection).toBeTruthy();
-    const btn: HTMLButtonElement = joinSection.querySelector('button');
+    const modal = fixture.nativeElement.querySelector('.modal-backdrop');
+    expect(modal).toBeTruthy();
+    const btn: HTMLButtonElement | null = modal.querySelector('button.btn.primary');
     expect(btn?.textContent).toContain('Join Room');
   });
 
-  it('deep-link with saved name does not auto-join', () => {
+  it('deep-link with saved name auto-joins', () => {
     jest.useFakeTimers();
     localStorage.setItem('displayName', 'Eve');
     paramMap$.next(convertToParamMap({ roomId: 'ROOM2' }));
 
     const fixture = TestBed.createComponent(RoomComponent);
     const comp = fixture.componentInstance as any;
-    const joinSpy = jest
-      .spyOn(comp, 'join')
-      .mockImplementation(() => undefined);
+    const joinSpy = jest.spyOn(comp, 'join').mockImplementation(() => undefined);
 
     // Flush any scheduled tasks
     jest.runOnlyPendingTimers();
-    expect(joinSpy).not.toHaveBeenCalled();
+    expect(joinSpy).toHaveBeenCalled();
     jest.useRealTimers();
+  });
+
+  it('auto-joins as host when arriving from Create Room (host=1)', () => {
+    jest.useFakeTimers();
+    // Arrange: simulate saved host name and host flag in query
+    localStorage.setItem('displayName', 'Hosty');
+    const ar = TestBed.inject(ActivatedRoute) as any;
+    ar.snapshot = { queryParamMap: convertToParamMap({ host: '1' }) };
+
+    // Update params to trigger constructor subscription
+    paramMap$.next(convertToParamMap({ roomId: 'ROOMX' }));
+
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+    const joinSpy = jest.spyOn(comp, 'join').mockImplementation(() => undefined);
+
+    // Detect changes and allow any scheduled timers (setTimeout) to run
+    fixture.detectChanges();
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+
+    expect(joinSpy).toHaveBeenCalled();
+  });
+
+  it('opens join modal when role=player is present but no saved name', () => {
+    localStorage.removeItem('displayName');
+    // Inject role=player into route snapshot
+    const ar = TestBed.inject(ActivatedRoute) as any;
+    ar.snapshot = { queryParamMap: convertToParamMap({ role: 'player' }) };
+
+    paramMap$.next(convertToParamMap({ roomId: 'ROOM3' }));
+
+    const fixture = TestBed.createComponent(RoomComponent);
+    fixture.detectChanges();
+
+    const modal = fixture.nativeElement.querySelector('.modal-backdrop');
+    expect(modal).toBeTruthy();
+  });
+
+  it('opens join modal when role=observer is present but no saved name', () => {
+    localStorage.removeItem('displayName');
+    // Inject role=observer into route snapshot
+    const ar = TestBed.inject(ActivatedRoute) as any;
+    ar.snapshot = { queryParamMap: convertToParamMap({ role: 'observer' }) };
+
+    paramMap$.next(convertToParamMap({ roomId: 'ROOM4' }));
+
+    const fixture = TestBed.createComponent(RoomComponent);
+    fixture.detectChanges();
+
+    const modal = fixture.nativeElement.querySelector('.modal-backdrop');
+    expect(modal).toBeTruthy();
   });
 
   it('shows invalid room error and CTA when room:error received', () => {
@@ -146,6 +196,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
   it('shows Reveal before reveal and Revote after reveal for host', () => {
     // Before reveal
     component.joined.set(true);
+    component.showJoinModal.set(false);
     component.revealed.set(false);
     fixture.detectChanges();
     const beforeHtml = fixture.nativeElement as HTMLElement;
@@ -167,6 +218,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
 
   it('clicking Revote emits vote:reset without confirm dialog', () => {
     component.joined.set(true);
+    component.showJoinModal.set(false);
     component.revealed.set(true);
     fixture.detectChanges();
 
@@ -203,6 +255,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
   it('revote clears local card selection highlight', () => {
     // Arrange: simulate a prior selection in VoteCards
     component.joined.set(true);
+    component.showJoinModal.set(false);
     fixture.detectChanges();
     const vcDE = fixture.debugElement.query(By.directive(VoteCardsComponent));
     const vc = vcDE.componentInstance as VoteCardsComponent;

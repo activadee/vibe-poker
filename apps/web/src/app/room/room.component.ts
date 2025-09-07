@@ -1,4 +1,11 @@
-import { Component, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  ViewChild,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -52,6 +59,8 @@ export class RoomComponent implements OnDestroy {
   voteCount = signal(0);
   voteTotal = signal(0);
   votedIds = signal<string[]>([]);
+  // Join modal visibility
+  showJoinModal = signal(false);
 
   private socket?: Socket;
   private socketId = signal<string>('');
@@ -73,9 +82,16 @@ export class RoomComponent implements OnDestroy {
         this.name = saved;
       }
       // Apply role preference from query param if present
-      const role = this.route.snapshot.queryParamMap.get('role');
+      const qp = this.route.snapshot.queryParamMap;
+      const role = qp.get('role');
       this.joinAsObserver = role === 'observer';
-      // Do not auto-join: allow user to confirm role before joining
+      // Show modal whenever no saved name exists, regardless of role
+      const shouldShowModal = !saved;
+      this.showJoinModal.set(shouldShowModal);
+      // Auto-join when a saved name exists (host/player/observer). Host elevation handled server-side.
+      if (!shouldShowModal) {
+        setTimeout(() => this.join());
+      }
     });
   }
 
@@ -112,12 +128,16 @@ export class RoomComponent implements OnDestroy {
     socket.on('connect', () => {
       if (socket.id) this.socketId.set(socket.id);
     });
-    socket.on('room:error', (err: RoomErrorEvent | { message?: string } | undefined) => {
-      const message = err && 'message' in err && typeof err.message === 'string'
-        ? err.message
-        : 'Something went wrong joining the room';
-      this.error.set(message);
-    });
+    socket.on(
+      'room:error',
+      (err: RoomErrorEvent | { message?: string } | undefined) => {
+        const message =
+          err && 'message' in err && typeof err.message === 'string'
+            ? err.message
+            : 'Something went wrong joining the room';
+        this.error.set(message);
+      }
+    );
     socket.on('room:state', (room: Room) => {
       if (!room || room.id !== this.roomId()) return;
       this.participants.set(room.participants ?? []);
@@ -136,6 +156,8 @@ export class RoomComponent implements OnDestroy {
       this.votes.set(room.votes ?? {});
       this.stats.set(room.revealed && room.stats ? room.stats : null);
       this.joined.set(true);
+      // Ensure any pending join modal is closed after we join
+      this.showJoinModal.set(false);
     });
     // FR-006: vote progress stream
     socket.on('vote:progress', (p: VoteProgressEvent | undefined) => {
@@ -163,6 +185,8 @@ export class RoomComponent implements OnDestroy {
       payload = { ...payload, role: 'observer' };
     }
     socket.emit('room:join', payload);
+    // Close modal once join is initiated; joined state will be reflected on room:state
+    this.showJoinModal.set(false);
   }
 
   leave() {
@@ -210,7 +234,9 @@ export class RoomComponent implements OnDestroy {
     socket.emit('vote:reset', {});
   }
   private genStoryId(): string {
-    return `S-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    return `S-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 6)}`;
   }
 
   saveStory() {
@@ -236,8 +262,26 @@ export class RoomComponent implements OnDestroy {
   }
 
   // FR-017: Deck presets mapping used to render vote cards
-  private static readonly FIBONACCI: string[] = ['1', '2', '3', '5', '8', '13', '21', '?', '☕'];
-  private static readonly TSHIRT: string[] = ['XS', 'S', 'M', 'L', 'XL', '?', '☕'];
+  private static readonly FIBONACCI: string[] = [
+    '1',
+    '2',
+    '3',
+    '5',
+    '8',
+    '13',
+    '21',
+    '?',
+    '☕',
+  ];
+  private static readonly TSHIRT: string[] = [
+    'XS',
+    'S',
+    'M',
+    'L',
+    'XL',
+    '?',
+    '☕',
+  ];
 
   deckValues() {
     const d = this.deckId();

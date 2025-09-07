@@ -5,7 +5,7 @@ Summary
 - Update “Copy Link” to copy a full invite text including both links.
 
 Details
-- Routing: Room route remains `/r/:roomId`. The app now understands a query `?role=player|observer` to preselect the role on the join form.
+- Routing: Room route remains `/r/:roomId`. The app understands a query `?role=player|observer` to preselect and optimize the join flow.
 - Lobby join: When joining from the lobby, we always navigate with an explicit role param:
   - Observer → `/r/:roomId?role=observer`
   - User → `/r/:roomId?role=player`
