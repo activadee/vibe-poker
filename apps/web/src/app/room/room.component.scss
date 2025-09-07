@@ -1,8 +1,3 @@
-.room {
-  max-width: 720px;
-  margin: 32px auto;
-}
-
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -14,52 +9,7 @@
 }
 
 .modal {
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-  width: min(92vw, 420px);
-}
-
-.modal h3 {
-  margin: 0 0 12px;
-}
-
-.modal label {
-  display: block;
-  margin: 8px 0;
-}
-
-.modal input[type="text"],
-.modal input[type="email"],
-.modal input[type="password"],
-.modal input:not([type]) {
-  display: block;
-  padding: 8px;
-  width: 100%;
-}
-
-.modal .actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.btn {
-  padding: 8px 12px;
-}
-
-.btn.primary {
-  background: #1976d2;
-  color: white;
-  border: none;
-}
-
-.btn.secondary {
-  background: transparent;
-  color: #333;
-  border: 1px solid #ccc;
+  width: min(92vw, 520px);
 }
 
 .link {
@@ -74,16 +24,6 @@ code {
   text-overflow: ellipsis;
   display: inline-block;
   max-width: 80%;
-}
-
-.copied {
-  color: #2e7d32;
-}
-
-.room-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin: 8px 0 16px;
 }
 
 .participants ul {
@@ -112,13 +52,7 @@ code {
 }
 
 .progress-pill {
-  display: inline-block;
   margin: 4px 0 8px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #f1f3f4;
-  color: #333;
-  font-size: 12px;
 }
 
 .results {
@@ -126,13 +60,7 @@ code {
 }
 
 .stats-pill {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #ede7f6;
-  color: #4527a0;
   font-size: 12px;
-  font-weight: 600;
 }
 
 .error {
@@ -141,29 +69,4 @@ code {
   padding: 12px;
   border-radius: 4px;
   margin: 8px 0 16px;
-}
-
-.story {
-  margin: 12px 0 18px;
-}
-
-.story-editor {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-.story-editor input,
-.story-editor textarea {
-  width: 100%;
-  padding: 8px;
-}
-
-.story-view .title {
-  font-weight: 600;
-}
-
-.story-view .notes {
-  margin: 6px 0 0;
-  white-space: pre-wrap;
 }

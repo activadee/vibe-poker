@@ -21,11 +21,24 @@ import type {
 import type { DeckId } from '@scrum-poker/shared-types';
 import { io, Socket } from 'socket.io-client';
 import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
+import { UiButtonDirective } from '../ui/button.directive';
+import { UiInputDirective } from '../ui/input.directive';
+import { UiCheckboxDirective } from '../ui/checkbox.directive';
+import { UiCardComponent } from '../ui/card/card.component';
 
 @Component({
   selector: 'app-room',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, VoteCardsComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    VoteCardsComponent,
+    UiButtonDirective,
+    UiInputDirective,
+    UiCheckboxDirective,
+    UiCardComponent,
+  ],
   templateUrl: './room.component.html',
   styleUrls: ['./room.component.scss'],
 })
