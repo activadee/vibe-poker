@@ -3,17 +3,47 @@
   margin: 32px auto;
 }
 
-.join {
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
-  gap: 12px;
-  align-items: end;
-  margin: 16px 0 24px;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.join input {
+.modal {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  width: min(92vw, 420px);
+}
+
+.modal h3 {
+  margin: 0 0 12px;
+}
+
+.modal label {
+  display: block;
+  margin: 8px 0;
+}
+
+.modal input[type="text"],
+.modal input[type="email"],
+.modal input[type="password"],
+.modal input:not([type]) {
   display: block;
   padding: 8px;
-  min-width: 220px;
+  width: 100%;
+}
+
+.modal .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .btn {

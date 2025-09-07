@@ -10,17 +10,23 @@
     </div>
   }
 
-  @if (!joined()) {
-    <div class="join">
-      <label>
-        Your name
-        <input [(ngModel)]="name" (keyup.enter)="join()" placeholder="Alice" />
-      </label>
-      <label class="check">
-        <input type="checkbox" [(ngModel)]="joinAsObserver" />
-        Join as observer (cannot vote)
-      </label>
-      <button class="btn primary" (click)="join()">Join Room</button>
+  @if (showJoinModal()) {
+    <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Join Room">
+      <div class="modal">
+        <h3>Join Room</h3>
+        <label>
+          Your name
+          <input [(ngModel)]="name" (keyup.enter)="join()" placeholder="Alice" />
+        </label>
+        <label class="check">
+          <input type="checkbox" [(ngModel)]="joinAsObserver" />
+          Join as observer (cannot vote)
+        </label>
+        <div class="actions">
+          <a routerLink="/" class="btn secondary">Cancel</a>
+          <button class="btn primary" (click)="join()">Join Room</button>
+        </div>
+      </div>
     </div>
   }
 

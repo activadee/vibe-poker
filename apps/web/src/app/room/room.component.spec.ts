@@ -59,7 +59,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
     component.participants.set([{ id: 'host-sock', name: 'Host', role: 'host' }]);
   });
 
-  it('deep-link without saved name shows join prompt', () => {
+  it('deep-link without saved name opens join modal', () => {
     // Ensure no saved name
     localStorage.removeItem('displayName');
     paramMap$.next(convertToParamMap({ roomId: 'ROOM1' }));
@@ -67,9 +67,9 @@ describe('RoomComponent (FR-014 Revote)', () => {
     const fixture = TestBed.createComponent(RoomComponent);
     fixture.detectChanges();
 
-    const joinSection = fixture.nativeElement.querySelector('.join');
-    expect(joinSection).toBeTruthy();
-    const btn: HTMLButtonElement = joinSection.querySelector('button');
+    const modal = fixture.nativeElement.querySelector('.modal-backdrop');
+    expect(modal).toBeTruthy();
+    const btn: HTMLButtonElement | null = modal.querySelector('button.btn.primary');
     expect(btn?.textContent).toContain('Join Room');
   });
 
@@ -88,6 +88,36 @@ describe('RoomComponent (FR-014 Revote)', () => {
     jest.runOnlyPendingTimers();
     expect(joinSpy).not.toHaveBeenCalled();
     jest.useRealTimers();
+  });
+
+  it('does not open join modal when role=user is present', () => {
+    localStorage.removeItem('displayName');
+    // Inject role=user into route snapshot
+    const ar = TestBed.inject(ActivatedRoute) as any;
+    ar.snapshot = { queryParamMap: convertToParamMap({ role: 'user' }) };
+
+    paramMap$.next(convertToParamMap({ roomId: 'ROOM3' }));
+
+    const fixture = TestBed.createComponent(RoomComponent);
+    fixture.detectChanges();
+
+    const modal = fixture.nativeElement.querySelector('.modal-backdrop');
+    expect(modal).toBeFalsy();
+  });
+
+  it('does not open join modal when role=observer is present', () => {
+    localStorage.removeItem('displayName');
+    // Inject role=observer into route snapshot
+    const ar = TestBed.inject(ActivatedRoute) as any;
+    ar.snapshot = { queryParamMap: convertToParamMap({ role: 'observer' }) };
+
+    paramMap$.next(convertToParamMap({ roomId: 'ROOM4' }));
+
+    const fixture = TestBed.createComponent(RoomComponent);
+    fixture.detectChanges();
+
+    const modal = fixture.nativeElement.querySelector('.modal-backdrop');
+    expect(modal).toBeFalsy();
   });
 
   it('shows invalid room error and CTA when room:error received', () => {
@@ -146,6 +176,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
   it('shows Reveal before reveal and Revote after reveal for host', () => {
     // Before reveal
     component.joined.set(true);
+    component.showJoinModal.set(false);
     component.revealed.set(false);
     fixture.detectChanges();
     const beforeHtml = fixture.nativeElement as HTMLElement;
@@ -167,6 +198,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
 
   it('clicking Revote emits vote:reset without confirm dialog', () => {
     component.joined.set(true);
+    component.showJoinModal.set(false);
     component.revealed.set(true);
     fixture.detectChanges();
 
@@ -197,12 +229,13 @@ describe('RoomComponent (FR-014 Revote)', () => {
     const calledWith: string = (navigator as any).clipboard.writeText.mock.calls[0][0];
     expect(calledWith).toContain('Join this room:');
     expect(calledWith).toContain('Join as observer: http://localhost/r/ROOM9?role=observer');
-    expect(calledWith).toContain('Join as user: http://localhost/r/ROOM9?role=player');
+    expect(calledWith).toContain('Join as user: http://localhost/r/ROOM9?role=user');
   });
 
   it('revote clears local card selection highlight', () => {
     // Arrange: simulate a prior selection in VoteCards
     component.joined.set(true);
+    component.showJoinModal.set(false);
     fixture.detectChanges();
     const vcDE = fixture.debugElement.query(By.directive(VoteCardsComponent));
     const vc = vcDE.componentInstance as VoteCardsComponent;

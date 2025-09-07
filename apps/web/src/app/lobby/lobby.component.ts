@@ -79,7 +79,7 @@ export class LobbyComponent {
       return;
     }
     this.error.set('');
-    const role = this.joinAsObserver ? 'observer' : 'player';
+    const role = this.joinAsObserver ? 'observer' : 'user';
     this.router.navigate(['/r', roomId], { queryParams: { role } });
   }
 

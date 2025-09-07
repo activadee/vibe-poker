@@ -32,7 +32,7 @@ export class RoomComponent implements OnDestroy {
   // Base URL for sharing; we expose explicit role variants instead of a bare URL
   url = '';
   readonly shareUrlObserver = computed(() => this.buildShareUrl('observer'));
-  readonly shareUrlPlayer = computed(() => this.buildShareUrl('player'));
+  readonly shareUrlUser = computed(() => this.buildShareUrl('user'));
 
   name = '';
   // Join preferences
@@ -52,6 +52,8 @@ export class RoomComponent implements OnDestroy {
   voteCount = signal(0);
   voteTotal = signal(0);
   votedIds = signal<string[]>([]);
+  // Join modal visibility
+  showJoinModal = signal(false);
 
   private socket?: Socket;
   private socketId = signal<string>('');
@@ -74,7 +76,12 @@ export class RoomComponent implements OnDestroy {
       }
       // Apply role preference from query param if present
       const role = this.route.snapshot.queryParamMap.get('role');
+      // Accept both 'user' (new) and legacy 'player' as the voter role; 'observer' remains observer
       this.joinAsObserver = role === 'observer';
+      // Decide whether to open the join modal per requirements:
+      // Only when no saved username, not host (implicit pre-join), and role param is not 'user' or 'observer'.
+      const explicitRole = role === 'user' || role === 'observer';
+      this.showJoinModal.set(!saved && !explicitRole);
       // Do not auto-join: allow user to confirm role before joining
     });
   }
@@ -136,6 +143,8 @@ export class RoomComponent implements OnDestroy {
       this.votes.set(room.votes ?? {});
       this.stats.set(room.revealed && room.stats ? room.stats : null);
       this.joined.set(true);
+      // Ensure any pending join modal is closed after we join
+      this.showJoinModal.set(false);
     });
     // FR-006: vote progress stream
     socket.on('vote:progress', (p: VoteProgressEvent | undefined) => {
@@ -163,6 +172,8 @@ export class RoomComponent implements OnDestroy {
       payload = { ...payload, role: 'observer' };
     }
     socket.emit('room:join', payload);
+    // Close modal once join is initiated; joined state will be reflected on room:state
+    this.showJoinModal.set(false);
   }
 
   leave() {
@@ -177,7 +188,7 @@ export class RoomComponent implements OnDestroy {
     const invite = [
       'Join this room:',
       `Join as observer: ${this.shareUrlObserver()}`,
-      `Join as user: ${this.shareUrlPlayer()}`,
+      `Join as user: ${this.shareUrlUser()}`,
     ].join('\n');
     await navigator.clipboard.writeText(invite);
     this.copied.set(true);
@@ -253,7 +264,7 @@ export class RoomComponent implements OnDestroy {
     socket.emit('deck:set', { deckId });
   }
 
-  private buildShareUrl(role: 'observer' | 'player'): string {
+  private buildShareUrl(role: 'observer' | 'user'): string {
     const origin = typeof location !== 'undefined' ? location.origin : '';
     const base = `${origin}/r/${encodeURIComponent(this.roomId())}`;
     const query = `role=${encodeURIComponent(role)}`;
