@@ -56,6 +56,8 @@ Goal: Align the Room UI with the design system primitives and the provided refer
 - Lint passes with only test-file warnings (allowed): `nx run web:lint`.
 - Build succeeds: `nx build web`.
 
+Note: Fixed a content projection issue in `<app-ui-card>` by replacing a self-closing `<ng-content />` with `<ng-content></ng-content>`. In some browsers/parsers the self-closing form could lead to projected nodes leaking outside their card container, which manifested as the “Copy Invite” button rendering outside the Share card.
+
 ## Usage
 
 No changes to routing or APIs. Run locally:

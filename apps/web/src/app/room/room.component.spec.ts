@@ -267,6 +267,22 @@ describe('RoomComponent (FR-014 Revote)', () => {
     expect(vc.selected()).toBeNull();
   });
 
+  it('renders Copy Invite button inside the Share card', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+    comp.joined.set(true);
+    fixture.detectChanges();
+
+    const cards = (fixture.nativeElement as HTMLElement).querySelectorAll('app-ui-card');
+    let shareCard: HTMLElement | null = null;
+    cards.forEach((c) => {
+      if (!shareCard && c.textContent?.includes('Share this room:')) shareCard = c as HTMLElement;
+    });
+    expect(shareCard).toBeTruthy();
+    const copyBtn = shareCard!.querySelector('button[appUiButton]') as HTMLButtonElement | null;
+    expect(copyBtn?.textContent?.trim()).toBe('Copy Invite');
+  });
+
   it('disables voting and ignores cast when role is observer (FR-013)', () => {
     const fixture = TestBed.createComponent(RoomComponent);
     const comp = fixture.componentInstance as any;
