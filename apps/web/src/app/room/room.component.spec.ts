@@ -69,7 +69,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
 
     const modal = fixture.nativeElement.querySelector('.modal-backdrop');
     expect(modal).toBeTruthy();
-    const btn: HTMLButtonElement | null = modal.querySelector('button.btn.primary');
+    const btn: HTMLButtonElement | null = modal.querySelector('button[appUiButton]');
     expect(btn?.textContent).toContain('Join Room');
   });
 
@@ -164,7 +164,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
     expect(errorEl?.textContent).toContain(
       'This room does not exist or has expired.'
     );
-    const cta: HTMLAnchorElement = errorEl.querySelector('a.btn');
+    const cta: HTMLAnchorElement = errorEl.querySelector('a[appUiButton]');
     expect(cta?.textContent).toContain('Create a new room');
   });
 
@@ -200,18 +200,14 @@ describe('RoomComponent (FR-014 Revote)', () => {
     component.revealed.set(false);
     fixture.detectChanges();
     const beforeHtml = fixture.nativeElement as HTMLElement;
-    expect(
-      beforeHtml.querySelector('button.btn.primary')?.textContent?.trim()
-    ).toBe('Reveal');
+    expect((beforeHtml.querySelector('.host-controls button[appUiButton]') as HTMLButtonElement)?.textContent?.trim()).toBe('Reveal');
 
     // After reveal
     component.revealed.set(true);
     fixture.detectChanges();
     const afterHtml = fixture.nativeElement as HTMLElement;
     // Primary CTA should be Revote
-    expect(
-      afterHtml.querySelector('button.btn.primary')?.textContent?.trim()
-    ).toBe('Revote');
+    expect((afterHtml.querySelector('.host-controls button[appUiButton]') as HTMLButtonElement)?.textContent?.trim()).toBe('Revote');
     // And Reveal should not be present
     expect(afterHtml.textContent).not.toContain('Reveal');
   });
@@ -223,7 +219,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
     fixture.detectChanges();
 
     const html = fixture.nativeElement as HTMLElement;
-    const btn = html.querySelector('button.btn.primary') as HTMLButtonElement;
+    const btn = html.querySelector('.host-controls button[appUiButton]') as HTMLButtonElement;
     expect(btn.textContent?.trim()).toBe('Revote');
     btn.click();
 
@@ -265,10 +261,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
     // Act: reveal then revote
     component.revealed.set(true);
     fixture.detectChanges();
-    ((html) =>
-      (html.querySelector('button.btn.primary') as HTMLButtonElement).click())(
-      fixture.nativeElement as HTMLElement
-    );
+    ((html) => (html.querySelector('.host-controls button[appUiButton]') as HTMLButtonElement).click())(fixture.nativeElement as HTMLElement);
 
     // Assert: selection cleared locally
     expect(vc.selected()).toBeNull();

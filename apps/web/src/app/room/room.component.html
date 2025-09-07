@@ -1,11 +1,13 @@
-<div class="room">
-  <h2>Room {{ roomId() }}</h2>
+<div class="min-h-screen px-4 py-8 max-w-5xl mx-auto">
+  <header class="mb-4">
+    <h2 class="text-xl font-semibold tracking-tight text-slate-900">Room {{ roomId() }}</h2>
+  </header>
 
   @if (error()) {
-    <div class="error">
-      {{ error() }}
-      <div class="actions">
-        <a routerLink="/" class="btn">Create a new room</a>
+    <div class="rounded-md border border-red-200 bg-red-50 text-red-800 p-4 mb-4 error">
+      <div class="flex items-start justify-between gap-4">
+        <p class="text-sm">{{ error() }}</p>
+        <a routerLink="/" appUiButton variant="secondary">Create a new room</a>
       </div>
     </div>
   }
@@ -13,123 +15,150 @@
   @if (showJoinModal()) {
     <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Join Room">
       <div class="modal">
-        <h3>Join Room</h3>
-        <label>
-          Your name
-          <input [(ngModel)]="name" (keyup.enter)="join()" placeholder="Alice" />
-        </label>
-        <label class="check">
-          <input type="checkbox" [(ngModel)]="joinAsObserver" />
-          Join as observer (cannot vote)
-        </label>
-        <div class="actions">
-          <a routerLink="/" class="btn secondary">Cancel</a>
-          <button class="btn primary" (click)="join()">Join Room</button>
-        </div>
+        <app-ui-card class="block">
+          <h3 class="text-base font-semibold text-slate-900">Join Room</h3>
+          <div class="mt-3">
+            <label for="joinName" class="block text-sm font-medium text-slate-700">Your name</label>
+            <input id="joinName" appUiInput [(ngModel)]="name" (keyup.enter)="join()" placeholder="Alice" />
+          </div>
+          <div class="mt-3 flex items-center gap-2 text-sm text-slate-700">
+            <input id="joinObserver" appUiCheckbox type="checkbox" [(ngModel)]="joinAsObserver" />
+            <label for="joinObserver" class="cursor-pointer select-none">Join as observer (cannot vote)</label>
+          </div>
+          <div class="mt-4 flex items-center justify-end gap-2">
+            <a routerLink="/" appUiButton variant="secondary">Cancel</a>
+            <button appUiButton (click)="join()">Join Room</button>
+          </div>
+        </app-ui-card>
       </div>
     </div>
   }
 
   @if (joined()) {
-    <div class="story">
-      <h3>Current Story</h3>
-      @if (myRole() === 'host') {
-        <div class="story-editor">
-          <label>
-            Title
-            <input [(ngModel)]="storyTitleModel" placeholder="Enter story title" />
-          </label>
-          <label>
-            Notes
-            <textarea [(ngModel)]="storyNotesModel" rows="3" placeholder="Optional notes"></textarea>
-          </label>
-          <div class="actions">
-            <button class="btn" [disabled]="!storyTitleModel.trim()" (click)="saveStory()">Save</button>
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-4">
+        <!-- Story -->
+        <app-ui-card class="block">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-semibold text-slate-900">Current Story</h3>
           </div>
-        </div>
-      } @else {
-        <div class="story-view">
-          <div class="title">{{ (story()?.title || '—') }}</div>
-          @if (story()?.notes) {
-            <pre class="notes">{{ story()?.notes }}</pre>
-          }
-        </div>
-      }
-    </div>
-    <div class="room-actions">
-      <button class="btn secondary" (click)="leave()">Leave Room</button>
-    </div>
-    <div class="share">
-      <p>Share this link with your team:</p>
-      <div class="link">
-        <code>{{ url }}</code>
-        <button (click)="copyLink()">Copy Link</button>
-      </div>
-      @if(copied()) {
-        <p class="copied">Link copied!</p>
-      }
-    </div>
-
-    <div class="participants">
-      <h3>Participants</h3>
-      <div class="progress-pill" *ngIf="voteTotal() > 0">
-        {{ voteCount() }}/{{ voteTotal() }} voted
-      </div>
-      @if (revealed() && stats()) {
-        <div class="results">
-          <div class="stats-pill">Avg {{ stats()!.avg.toFixed(1) }} • Median {{ stats()!.median.toFixed(1) }}</div>
-        </div>
-      }
-      <ul>
-        @for (p of participants(); track p.id) {
-          <li>
-            <span class="name">{{ p.name }}</span>
-            <span class="role">{{ p.role }}</span>
-            <span class="badge voted" *ngIf="hasVoted(p)">Voted</span>
-            <span class="vote" *ngIf="revealed(); else hiddenVote">{{ votes()[p.id] ?? '—' }}</span>
-            <ng-template #hiddenVote>
-              <span class="vote muted">—</span>
-            </ng-template>
-          </li>
-        }
-      </ul>
-    </div>
-
-    <div class="voting">
-      <h3>Vote</h3>
-      <app-vote-cards
-        [values]="deckValues()"
-        [disabled]="myRole() === 'observer'"
-        (valueSelected)="castVote($event)"
-      />
-    </div>
-
-    @if (myRole() === 'host') {
-      <div class="host-controls">
-        <h3>Host Controls</h3>
-        <div class="deck-select">
-          <label>
-            Deck Preset
-            <select [ngModel]="deckId()" (ngModelChange)="changeDeck($event)">
-              <option value="fibonacci">Fibonacci</option>
-              <option value="tshirt">T‑Shirt sizes</option>
-            </select>
-          </label>
-        </div>
-        <div class="controls">
-          @if (!revealed()) {
-            <ng-container>
-              <button class="btn primary" (click)="reveal()">Reveal</button>
-              <button class="btn" (click)="resetVotes()">Reset</button>
-            </ng-container>
+          @if (myRole() === 'host') {
+            <div class="mt-3 grid grid-cols-1 gap-3">
+              <div>
+                <label for="storyTitle" class="block text-sm font-medium text-slate-700">Title</label>
+                <input id="storyTitle" appUiInput [(ngModel)]="storyTitleModel" placeholder="Enter story title" />
+              </div>
+              <div>
+                <label for="storyNotes" class="block text-sm font-medium text-slate-700">Notes</label>
+                <textarea id="storyNotes" appUiInput [(ngModel)]="storyNotesModel" rows="3" placeholder="Optional notes"></textarea>
+              </div>
+              <div class="flex justify-end">
+                <button appUiButton variant="secondary" [disabled]="!storyTitleModel.trim()" (click)="saveStory()">Save</button>
+              </div>
+            </div>
           } @else {
-            <ng-container>
-              <!-- FR-014: After reveal show prominent Revote CTA -->
-              <button class="btn primary" (click)="revote()">Revote</button>
-            </ng-container>
+            <div class="mt-3">
+              <div class="font-medium text-slate-900">{{ (story()?.title || '—') }}</div>
+              @if (story()?.notes) {
+                <pre class="mt-2 text-sm text-slate-600 whitespace-pre-wrap">{{ story()?.notes }}</pre>
+              }
+            </div>
           }
-        </div>
+        </app-ui-card>
+
+        <!-- Voting -->
+        <app-ui-card class="block">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-semibold text-slate-900">Vote</h3>
+          </div>
+          <app-vote-cards
+            [values]="deckValues()"
+            [disabled]="myRole() === 'observer'"
+            (valueSelected)="castVote($event)"
+          />
+        </app-ui-card>
       </div>
-    }
+
+      <div class="space-y-4">
+        <!-- Room actions -->
+        <app-ui-card class="block">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm text-slate-600">Share this room:</p>
+              <code class="block mt-1 text-xs text-slate-700 truncate">{{ url }}</code>
+            </div>
+            <div class="shrink-0">
+              <button appUiButton size="sm" (click)="copyLink()">Copy Invite</button>
+            </div>
+          </div>
+          @if(copied()) {
+            <p class="mt-2 text-xs text-green-700">Link copied!</p>
+          }
+          <div class="mt-4 flex justify-end">
+            <button appUiButton variant="secondary" size="sm" (click)="leave()">Leave Room</button>
+          </div>
+        </app-ui-card>
+
+        <!-- Participants -->
+        <app-ui-card class="block participants">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-semibold text-slate-900">Participants</h3>
+            <div *ngIf="voteTotal() > 0" class="progress-pill inline-flex items-center rounded-full px-3 py-1 text-xs bg-slate-100 text-slate-700">
+              {{ voteCount() }}/{{ voteTotal() }} voted
+            </div>
+          </div>
+          @if (revealed() && stats()) {
+            <div class="mt-2 results">
+              <div class="stats-pill inline-flex items-center rounded-full px-3 py-1 text-xs bg-violet-100 text-violet-800 font-semibold">
+                Avg {{ stats()!.avg.toFixed(1) }} • Median {{ stats()!.median.toFixed(1) }}
+              </div>
+            </div>
+          }
+          <ul class="mt-3 space-y-2">
+            @for (p of participants(); track p.id) {
+              <li class="flex items-center justify-between">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="truncate">{{ p.name }}</span>
+                  <span class="role text-slate-500 text-xs">{{ p.role }}</span>
+                  <span class="badge voted" *ngIf="hasVoted(p)">Voted</span>
+                </div>
+                <div class="text-sm text-slate-700">
+                  <span class="vote" *ngIf="revealed(); else hiddenVote">{{ votes()[p.id] ?? '—' }}</span>
+                  <ng-template #hiddenVote>
+                    <span class="vote text-slate-400">—</span>
+                  </ng-template>
+                </div>
+              </li>
+            }
+          </ul>
+        </app-ui-card>
+
+        <!-- Host controls -->
+        @if (myRole() === 'host') {
+          <app-ui-card class="block host-controls">
+            <h3 class="text-base font-semibold text-slate-900">Host Controls</h3>
+            <div class="mt-3 deck-select">
+              <label for="deckSelect" class="block text-sm font-medium text-slate-700">Deck Preset</label>
+              <select id="deckSelect" class="mt-1 block w-full rounded-md border-slate-200 bg-white text-slate-900 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/40" [ngModel]="deckId()" (ngModelChange)="changeDeck($event)">
+                <option value="fibonacci">Fibonacci</option>
+                <option value="tshirt">T‑Shirt sizes</option>
+              </select>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+              @if (!revealed()) {
+                <ng-container>
+                  <button appUiButton (click)="reveal()">Reveal</button>
+                  <button appUiButton variant="secondary" (click)="resetVotes()">Reset</button>
+                </ng-container>
+              } @else {
+                <ng-container>
+                  <button appUiButton (click)="revote()">Revote</button>
+                </ng-container>
+              }
+            </div>
+          </app-ui-card>
+        }
+      </div>
+    </section>
   }
 </div>
