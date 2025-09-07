@@ -318,3 +318,104 @@ describe('RoomComponent (FR-014 Revote)', () => {
     );
   });
 });
+
+describe('RoomComponent (FR-017 Deck presets)', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [RoomComponent],
+      providers: [
+        {
+          provide: Router,
+          useValue: {
+            navigateByUrl: jest.fn(),
+            createUrlTree: jest.fn(() => ({})),
+            serializeUrl: jest.fn(() => '/'),
+            events: { subscribe: () => ({ unsubscribe: () => undefined }) },
+          },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: of(convertToParamMap({ roomId: 'R1' })),
+            snapshot: { queryParamMap: convertToParamMap({}) },
+          },
+        },
+      ],
+    }).compileComponents();
+  });
+
+  it('renders deck dropdown for host and emits deck:set', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+    // Host context
+    comp.joined.set(true);
+    comp.socketId.set('h1');
+    comp.participants.set([{ id: 'h1', name: 'Host', role: 'host' }]);
+    const fakeSocket = {
+      emit: jest.fn(),
+      on: jest.fn(),
+      removeAllListeners: jest.fn(),
+      disconnect: jest.fn(),
+    } as any;
+    comp.socket = fakeSocket;
+
+    fixture.detectChanges();
+
+    const select: HTMLSelectElement | null = fixture.nativeElement.querySelector(
+      '.deck-select select'
+    );
+    expect(select).toBeTruthy();
+
+    // Call component method (simpler than wiring DOM ngModelChange)
+    comp.changeDeck('tshirt');
+    expect(fakeSocket.emit).toHaveBeenCalledWith('deck:set', { deckId: 'tshirt' });
+  });
+
+  it('updates vote card values when deckId changes from server and clears selection', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+    comp.joined.set(true);
+    comp.socketId.set('p1');
+    comp.participants.set([{ id: 'p1', name: 'Player', role: 'player' }]);
+
+    // Attach fake socket and listeners
+    const handlers: Record<string, (arg?: unknown) => void> = {};
+    const fakeSocket = {
+      on: (evt: string, cb: (arg?: unknown) => void) => {
+        handlers[evt] = cb;
+      },
+      emit: jest.fn(),
+      removeAllListeners: jest.fn(),
+      disconnect: jest.fn(),
+    } as any;
+    comp.socket = fakeSocket;
+    comp.setupSocketListeners(fakeSocket);
+
+    fixture.detectChanges();
+
+    // Ensure VoteCards is present and has default Fibonacci values
+    const vcDE = fixture.debugElement.query(By.directive(VoteCardsComponent));
+    const vc = vcDE.componentInstance as VoteCardsComponent;
+    expect(vc.values).toEqual(['1', '2', '3', '5', '8', '13', '21', '?', '☕']);
+
+    // Simulate a selection
+    vc.selected.set('5');
+    expect(vc.selected()).toBe('5');
+
+    // Server updates deck to T-Shirt sizes
+    handlers['room:state']?.({
+      id: 'R1',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 1000,
+      participants: [{ id: 'p1', name: 'Player', role: 'player' }],
+      deckId: 'tshirt',
+    } as any);
+
+    fixture.detectChanges();
+
+    // Values should switch to T-Shirt preset
+    expect(vc.values).toEqual(['XS', 'S', 'M', 'L', 'XL', '?', '☕']);
+    // Local selection should be cleared
+    expect(vc.selected()).toBeNull();
+  });
+});
