@@ -6,9 +6,12 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
+import { sessionMiddleware } from './app/session.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Attach HTTP session middleware for REST routes
+  app.use(sessionMiddleware);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
   const port = process.env.PORT || 3000;

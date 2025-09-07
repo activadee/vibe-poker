@@ -219,7 +219,8 @@ export class RoomComponent implements OnDestroy {
     ].join('\n');
     // Prefer Web Share on supported devices, fallback to clipboard
     try {
-      const nav = (globalThis as unknown as { navigator?: Navigator }).navigator;
+      const nav = (globalThis as unknown as { navigator?: Navigator })
+        .navigator;
       if (nav && 'share' in nav && typeof (nav as any).share === 'function') {
         await (nav as any).share({ title: 'Planning Poker', text: invite });
       } else {
@@ -227,7 +228,9 @@ export class RoomComponent implements OnDestroy {
       }
     } catch {
       // Last-resort fallback to clipboard if share failed
-      try { await navigator.clipboard.writeText(invite); } catch {}
+      try {
+        await navigator.clipboard.writeText(invite);
+      } catch {}
     }
     this.copied.set(true);
     setTimeout(() => this.copied.set(false), 1500);
@@ -331,7 +334,7 @@ export class RoomComponent implements OnDestroy {
 
   // Allow closing the modal with Escape (navigates back to lobby)
   @HostListener('window:keydown.escape', ['$event'])
-  onEscape(ev: KeyboardEvent) {
+  onEscape(ev: Event) {
     if (this.showJoinModal()) {
       ev.preventDefault();
       this.router.navigateByUrl('/');

@@ -58,8 +58,8 @@ export class LobbyComponent {
         }
         // Warm the Room chunk before navigating for a snappier transition
         void import('../room/room.component');
-        // Navigate with a flag so the room view can auto-join the host
-        this.router.navigate(['/r', res.id], { queryParams: { host: '1' } });
+        // Navigate to the room (host elevation handled server-side via session)
+        this.router.navigate(['/r', res.id]);
       } else {
         this.error.set('Unexpected response from server');
       }

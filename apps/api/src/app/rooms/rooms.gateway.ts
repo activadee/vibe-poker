@@ -23,6 +23,9 @@ import type {
   VoteProgressEvent,
 } from '@scrum-poker/shared-types';
 import type { Story } from '@scrum-poker/shared-types';
+import type { Request, Response } from 'express';
+import type { IncomingMessage, ServerResponse } from 'http';
+import { sessionMiddleware } from '../session.middleware';
 
 @Injectable()
 @WebSocketGateway({
@@ -79,6 +82,22 @@ export class RoomsGateway implements OnGatewayDisconnect {
 
   private logEvent(event: Record<string, unknown>) {
     this.logger.log(JSON.stringify(event));
+  }
+
+  // Share HTTP session with Socket.IO by wrapping express-session middleware
+  private wrapSession(
+    mw: (req: Request, res: Response, next: (err?: unknown) => void) => void
+  ) {
+    return (
+      req: IncomingMessage,
+      res: ServerResponse,
+      next: (err?: unknown) => void
+    ) => mw(req as unknown as Request, res as unknown as Response, next);
+  }
+
+  afterInit(server: Server) {
+    // engine.use applies middleware to the underlying HTTP upgrade requests
+    server.engine.use(this.wrapSession(sessionMiddleware));
   }
 
   private clientIp(client: Socket): string {
@@ -212,7 +231,12 @@ export class RoomsGateway implements OnGatewayDisconnect {
     // Add participant (allow duplicate names; socket.id is unique)
     // If the room contains a placeholder host entry matching the name, elevate to host
     const requestedRole = payload?.role;
-    const shouldBeHost = !!room.participants.find((p) => p.role === 'host' && p.name === name);
+    // Elevate to host when session uid matches room owner
+    type ReqWithSession = Request & { session?: { uid?: string } };
+    const req = client.request as unknown as ReqWithSession;
+    const sessionUid = req.session?.uid || '';
+    const ownerUid = this.rooms.getOwner(roomId) || '';
+    const shouldBeHost = !!sessionUid && sessionUid === ownerUid;
     const participant: Participant = {
       id: client.id,
       name,
@@ -231,14 +255,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     const roomId = ctx?.roomId ?? this.socketRoom.get(client.id);
     if (!roomId) return;
     this.socketRoom.delete(client.id);
-    const wasHost = ctx?.me.role === 'host';
-    const hostName = ctx?.me.name ?? '';
     const room = this.rooms.removeParticipant(roomId, client.id);
     if (!room) return;
-    // Preserve host role across reloads by keeping a placeholder host by name
-    if (wasHost && hostName) {
-      this.rooms.addParticipant(roomId, { id: 'host', name: hostName, role: 'host' });
-    }
     this.logEvent({ event: 'room_leave', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
