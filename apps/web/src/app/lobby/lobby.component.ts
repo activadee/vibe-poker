@@ -56,6 +56,8 @@ export class LobbyComponent {
         } catch (err) {
           console.warn('localStorage unavailable', err);
         }
+        // Warm the Room chunk before navigating for a snappier transition
+        void import('../room/room.component');
         // Navigate with a flag so the room view can auto-join the host
         this.router.navigate(['/r', res.id], { queryParams: { host: '1' } });
       } else {
@@ -85,6 +87,8 @@ export class LobbyComponent {
     }
     this.error.set('');
     const role = this.joinAsObserver ? 'observer' : 'player';
+    // Warm the Room chunk before navigating for a snappier transition
+    void import('../room/room.component');
     this.router.navigate(['/r', roomId], { queryParams: { role } });
   }
 

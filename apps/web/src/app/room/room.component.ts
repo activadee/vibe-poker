@@ -5,6 +5,7 @@ import {
   computed,
   inject,
   signal,
+  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -216,7 +217,18 @@ export class RoomComponent implements OnDestroy {
       `Join as observer: ${this.shareUrlObserver()}`,
       `Join as user: ${this.shareUrlPlayer()}`,
     ].join('\n');
-    await navigator.clipboard.writeText(invite);
+    // Prefer Web Share on supported devices, fallback to clipboard
+    try {
+      const nav = (globalThis as unknown as { navigator?: Navigator }).navigator;
+      if (nav && 'share' in nav && typeof (nav as any).share === 'function') {
+        await (nav as any).share({ title: 'Planning Poker', text: invite });
+      } else {
+        await nav?.clipboard?.writeText?.(invite);
+      }
+    } catch {
+      // Last-resort fallback to clipboard if share failed
+      try { await navigator.clipboard.writeText(invite); } catch {}
+    }
     this.copied.set(true);
     setTimeout(() => this.copied.set(false), 1500);
   }
@@ -315,5 +327,14 @@ export class RoomComponent implements OnDestroy {
     const base = `${origin}/r/${encodeURIComponent(this.roomId())}`;
     const query = `role=${encodeURIComponent(role)}`;
     return `${base}?${query}`;
+  }
+
+  // Allow closing the modal with Escape (navigates back to lobby)
+  @HostListener('window:keydown.escape', ['$event'])
+  onEscape(ev: KeyboardEvent) {
+    if (this.showJoinModal()) {
+      ev.preventDefault();
+      this.router.navigateByUrl('/');
+    }
   }
 }

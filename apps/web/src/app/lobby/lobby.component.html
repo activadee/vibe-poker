@@ -16,7 +16,7 @@
       </div>
       <form class="mt-4" (ngSubmit)="createRoom()" autocomplete="on">
         <label for="displayName" class="mb-1 block text-sm font-medium text-slate-700">Display Name</label>
-        <input uiInput id="displayName" name="displayName" placeholder="e.g. Alice" [(ngModel)]="name" minlength="3" maxlength="30" required autocomplete="name" aria-describedby="nameHelp" />
+        <input appUiInput id="displayName" name="displayName" placeholder="e.g. Alice" [(ngModel)]="name" minlength="3" maxlength="30" required autocomplete="name" aria-describedby="nameHelp" />
         <p id="nameHelp" class="mt-1 text-xs text-slate-500">3–30 characters</p>
         <div class="mt-4">
           <button appUiButton type="submit" [disabled]="loading() || !nameValid()" class="w-full">Create Room</button>
