@@ -71,6 +71,17 @@ describe('LobbyComponent', () => {
     expect(btn.disabled).toBe(false);
   });
 
+  it('renders the observer checkbox inline with label', () => {
+    const fixture = TestBed.createComponent(LobbyComponent);
+    fixture.detectChanges();
+    const container: HTMLElement | null = fixture.nativeElement.querySelector('app-ui-card:nth-of-type(2) .flex.items-center');
+    expect(container).toBeTruthy();
+    const checkbox: HTMLInputElement | null = fixture.nativeElement.querySelector('input[type="checkbox"][name="joinAsObserver"]');
+    expect(checkbox).toBeTruthy();
+    // Ensure checkbox is not full width via class
+    expect(checkbox!.className).not.toContain('w-full');
+  });
+
   it('parses link and navigates on join', () => {
     const fixture = TestBed.createComponent(LobbyComponent);
     const comp = fixture.componentInstance;

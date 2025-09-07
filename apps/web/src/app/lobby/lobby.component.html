@@ -37,10 +37,10 @@
         <label for="roomCode" class="mb-1 block text-sm font-medium text-slate-700">Room Code or Link</label>
         <input appUiInput id="roomCode" name="roomCode" placeholder="abc-123-xy or https://…/r/ABCD-1234" [(ngModel)]="roomCode" aria-describedby="roomHelp" />
         <p id="roomHelp" class="mt-1 text-xs text-slate-500">Join is enabled when code is present.</p>
-        <label class="mt-3 flex items-center gap-2 text-sm text-slate-700">
-          <input appUiCheckbox type="checkbox" [(ngModel)]="joinAsObserver" name="joinAsObserver" />
-          Join as observer (cannot vote)
-        </label>
+        <div class="mt-3 flex items-center gap-2 text-sm text-slate-700">
+          <input appUiCheckbox id="joinAsObserver" type="checkbox" [(ngModel)]="joinAsObserver" name="joinAsObserver" />
+          <label for="joinAsObserver" class="cursor-pointer select-none">Join as observer (cannot vote)</label>
+        </div>
         <div class="mt-4">
           <button appUiButton type="submit" [disabled]="!canJoin()" class="w-full" variant="secondary">Join Room</button>
         </div>
