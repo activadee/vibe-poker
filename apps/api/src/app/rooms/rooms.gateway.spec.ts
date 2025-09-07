@@ -498,14 +498,24 @@ describe('RoomsGateway', () => {
   });
 
   describe('FR-017 deck:set', () => {
-    it('host can set deck, clears votes, and broadcasts progress reset', () => {
+    it('host can set deck, clears votes, unreveals, and broadcasts progress reset', () => {
       const room = makeRoom('ROOMD');
       room.participants = [
         { id: 'h1', name: 'Hannah', role: 'host' },
         { id: 'p1', name: 'Alice', role: 'player' },
       ];
       room.votes = { p1: '5', h1: '8' } as any;
+      // Previously revealed with computed stats present
+      (room as any).revealed = true;
+      (room as any).stats = { avg: 6.5, median: 6.5 } as any;
       rooms.get.mockReturnValue(room);
+      rooms.reset.mockImplementation((rid: string) => {
+        if (rid !== 'ROOMD') throw new Error('wrong room');
+        room.revealed = false;
+        room.votes = {} as any;
+        delete (room as any).stats;
+        return room;
+      });
       rooms.computeProgress.mockImplementation((r: Room) => {
         const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
         const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
@@ -521,11 +531,18 @@ describe('RoomsGateway', () => {
       // Deck updated on room object and votes cleared
       expect(room.deckId).toBe('tshirt');
       expect(room.votes).toEqual({});
+      expect(room.revealed).toBe(false);
+      expect((room as any).stats).toBeUndefined();
 
       // Broadcasts state + progress with 0 of 2
       const toMock = (gateway as any).server.to as jest.Mock;
       expect(toMock).toHaveBeenCalledWith('room:ROOMD');
-      expect(toEmit).toHaveBeenCalledWith('room:state', expect.any(Object));
+      // room:state is emitted with hidden votes and revealed=false
+      const state = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
+      expect(state).toBeDefined();
+      expect(state.revealed).toBe(false);
+      expect('votes' in state).toBe(false);
+      expect('stats' in state).toBe(false);
       expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 2, votedIds: [] });
     });
 

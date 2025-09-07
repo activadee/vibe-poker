@@ -14,8 +14,8 @@ Contract
 Behavior
 - On success:
   - `room.deckId` is set to the requested preset id.
-  - `room.votes` is cleared (players’ selections are removed).
-  - Emits `room:state` with the updated room (votes omitted unless revealed).
+  - The round is reset: `revealed = false`, `votes = {}`, and any `stats` removed.
+  - Emits `room:state` with the updated room (votes/stats omitted until reveal).
   - Emits `vote:progress` with counts recomputed (typically reset to 0/Y).
 
 Implementation

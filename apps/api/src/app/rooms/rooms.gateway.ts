@@ -370,8 +370,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     }
     const deckId = payload?.deckId ?? 'fibonacci';
     room.deckId = deckId;
-    // Reset votes when deck changes
-    room.votes = {};
+    // Reset round state when deck changes (votes cleared, reveal off, stats removed)
+    this.rooms.reset(roomId);
     this.logEvent({ event: 'deck_set', room_id: roomId, socket_id: client.id, deck: deckId });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
