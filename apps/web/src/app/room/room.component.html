@@ -92,6 +92,7 @@
     <div class="voting">
       <h3>Vote</h3>
       <app-vote-cards
+        [values]="deckValues()"
         [disabled]="myRole() === 'observer'"
         (valueSelected)="castVote($event)"
       />
@@ -100,6 +101,15 @@
     @if (myRole() === 'host') {
       <div class="host-controls">
         <h3>Host Controls</h3>
+        <div class="deck-select">
+          <label>
+            Deck Preset
+            <select [ngModel]="deckId()" (ngModelChange)="changeDeck($event)">
+              <option value="fibonacci">Fibonacci</option>
+              <option value="tshirt">T‑Shirt sizes</option>
+            </select>
+          </label>
+        </div>
         <div class="controls">
           @if (!revealed()) {
             <ng-container>

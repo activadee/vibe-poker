@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+import { Component, EventEmitter, Output, computed, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -10,26 +10,26 @@ import { CommonModule } from '@angular/common';
 })
 export class VoteCardsComponent {
   // Standard Fibonacci preset per FR-007
-  @Input() values: string[] = ['1', '2', '3', '5', '8', '13', '21', '?', '☕'];
-  @Input() disabled = false;
+  readonly values = input<string[]>(['1', '2', '3', '5', '8', '13', '21', '?', '☕']);
+  readonly disabled = input<boolean>(false);
 
   @Output() valueSelected = new EventEmitter<string>();
 
   readonly selected = signal<string | null>(null);
 
-  readonly items = computed(() => this.values.map((v) => ({
+  readonly items = computed(() => this.values().map((v) => ({
     value: v,
     label: v === '☕' ? 'Coffee break' : v,
   })));
 
   onCardClick(value: string) {
-    if (this.disabled) return;
+    if (this.disabled()) return;
     this.selected.set(value);
     this.valueSelected.emit(value);
   }
 
   onKeydown(ev: KeyboardEvent, index: number) {
-    if (this.disabled) return;
+    if (this.disabled()) return;
     const key = ev.key;
     const items = this.items();
     const max = items.length - 1;

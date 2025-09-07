@@ -22,6 +22,23 @@ describe('VoteCardsComponent', () => {
     expect(btns).toEqual(['1', '2', '3', '5', '8', '13', '21', '?', '☕']);
   });
 
+  it('updates rendered cards when values input changes', () => {
+    // Initially Fibonacci
+    let btns = Array.from(
+      fixture.nativeElement.querySelectorAll<HTMLButtonElement>('button.card')
+    ).map((b) => b.textContent?.trim());
+    expect(btns).toEqual(['1', '2', '3', '5', '8', '13', '21', '?', '☕']);
+
+    // Change to T-Shirt sizes via input API
+    fixture.componentRef.setInput('values', ['XS', 'S', 'M', 'L', 'XL', '?', '☕']);
+    fixture.detectChanges();
+
+    btns = Array.from(
+      fixture.nativeElement.querySelectorAll<HTMLButtonElement>('button.card')
+    ).map((b) => b.textContent?.trim());
+    expect(btns).toEqual(['XS', 'S', 'M', 'L', 'XL', '?', '☕']);
+  });
+
   it('emits selection and marks the clicked card selected', () => {
     const spy = jest.fn();
     component.valueSelected.subscribe(spy);
@@ -59,7 +76,7 @@ describe('VoteCardsComponent', () => {
   it('does not emit when disabled', () => {
     const spy = jest.fn();
     component.valueSelected.subscribe(spy);
-    component.disabled = true;
+    fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();
 
     const any = fixture.nativeElement.querySelector('button.card') as HTMLButtonElement;
@@ -69,7 +86,7 @@ describe('VoteCardsComponent', () => {
   });
 
   it('shows tooltip and hint when disabled', () => {
-    component.disabled = true;
+    fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();
 
     const btn = fixture.nativeElement.querySelector('button.card') as HTMLButtonElement;

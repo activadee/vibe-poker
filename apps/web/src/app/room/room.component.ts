@@ -2,7 +2,16 @@ import { Component, OnDestroy, ViewChild, computed, inject, signal } from '@angu
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import type { Room, RoomErrorEvent, VoteProgressEvent, Participant, VoteStats, Story, RoomJoinPayload } from '@scrum-poker/shared-types';
+import type {
+  Room,
+  RoomErrorEvent,
+  VoteProgressEvent,
+  Participant,
+  VoteStats,
+  Story,
+  RoomJoinPayload,
+} from '@scrum-poker/shared-types';
+import type { DeckId } from '@scrum-poker/shared-types';
 import { io, Socket } from 'socket.io-client';
 import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
 
@@ -32,7 +41,7 @@ export class RoomComponent implements OnDestroy {
   story = signal<Story | null>(null);
   storyTitleModel = '';
   storyNotesModel = '';
-  deckId = signal<'fibonacci' | string>('fibonacci');
+  deckId = signal<DeckId>('fibonacci');
   votes = signal<Record<string, string>>({});
   // FR-009 results stats
   stats = signal<VoteStats | null>(null);
@@ -114,7 +123,13 @@ export class RoomComponent implements OnDestroy {
       // Seed editor models for host convenience
       this.storyTitleModel = room.story?.title ?? '';
       this.storyNotesModel = room.story?.notes ?? '';
-      this.deckId.set(room.deckId ?? 'fibonacci');
+      const prevDeck = this.deckId();
+      const nextDeck: DeckId = (room.deckId ?? 'fibonacci') as DeckId;
+      this.deckId.set(nextDeck);
+      // Clear local selection if deck changed so UI doesn't show a stale highlight
+      if (prevDeck !== nextDeck) {
+        this.cards?.clearSelection();
+      }
       this.votes.set(room.votes ?? {});
       this.stats.set(room.revealed && room.stats ? room.stats : null);
       this.joined.set(true);
@@ -210,5 +225,23 @@ export class RoomComponent implements OnDestroy {
     if (this.revealed()) return false;
     const ids = this.votedIds();
     return !!ids && ids.includes(p.id);
+  }
+
+  // FR-017: Deck presets mapping used to render vote cards
+  private static readonly FIBONACCI: string[] = ['1', '2', '3', '5', '8', '13', '21', '?', '☕'];
+  private static readonly TSHIRT: string[] = ['XS', 'S', 'M', 'L', 'XL', '?', '☕'];
+
+  deckValues() {
+    const d = this.deckId();
+    if (d === 'tshirt') return RoomComponent.TSHIRT;
+    // Default to Fibonacci if unknown deck id
+    return RoomComponent.FIBONACCI;
+  }
+
+  // Host action: change deck preset for the room
+  changeDeck(deckId: DeckId) {
+    if (this.myRole() !== 'host') return;
+    const socket = this.connect();
+    socket.emit('deck:set', { deckId });
   }
 }

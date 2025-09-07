@@ -4,9 +4,9 @@
       type="button"
       class="card"
       role="listitem"
-      [disabled]="disabled"
-      [attr.title]="disabled ? 'Observers cannot vote' : null"
-      [attr.aria-disabled]="disabled ? 'true' : 'false'"
+      [disabled]="disabled()"
+      [attr.title]="disabled() ? 'Observers cannot vote' : null"
+      [attr.aria-disabled]="disabled() ? 'true' : 'false'"
       [attr.aria-pressed]="selected() === item.value ? 'true' : 'false'"
       [class.selected]="selected() === item.value"
       [attr.aria-label]="item.label === item.value ? 'Vote ' + item.value : item.label"
@@ -16,7 +16,7 @@
       {{ item.value }}
     </button>
   }
-  @if (disabled) {
+  @if (disabled()) {
     <p class="hint" aria-live="polite">Observers cannot vote</p>
   }
 </div>

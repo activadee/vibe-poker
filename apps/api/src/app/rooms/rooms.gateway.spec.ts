@@ -496,4 +496,90 @@ describe('RoomsGateway', () => {
     const toMock = (gateway as any).server.to as jest.Mock;
     expect(toMock).not.toHaveBeenCalledWith('room:ROOMBIG');
   });
+
+  describe('FR-017 deck:set', () => {
+    it('host can set deck, clears votes, unreveals, and broadcasts progress reset', () => {
+      const room = makeRoom('ROOMD');
+      room.participants = [
+        { id: 'h1', name: 'Hannah', role: 'host' },
+        { id: 'p1', name: 'Alice', role: 'player' },
+      ];
+      room.votes = { p1: '5', h1: '8' } as any;
+      // Previously revealed with computed stats present
+      (room as any).revealed = true;
+      (room as any).stats = { avg: 6.5, median: 6.5 } as any;
+      rooms.get.mockReturnValue(room);
+      rooms.reset.mockImplementation((rid: string) => {
+        if (rid !== 'ROOMD') throw new Error('wrong room');
+        room.revealed = false;
+        room.votes = {} as any;
+        delete (room as any).stats;
+        return room;
+      });
+      rooms.computeProgress.mockImplementation((r: Room) => {
+        const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
+        const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
+        return { count: votedIds.length, total: eligible.length, votedIds };
+      });
+
+      // Map host socket
+      (gateway as any).socketRoom.set('h1', 'ROOMD');
+      const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
+
+      gateway.handleDeckSet({ deckId: 'tshirt' } as any, host);
+
+      // Deck updated on room object and votes cleared
+      expect(room.deckId).toBe('tshirt');
+      expect(room.votes).toEqual({});
+      expect(room.revealed).toBe(false);
+      expect((room as any).stats).toBeUndefined();
+
+      // Broadcasts state + progress with 0 of 2
+      const toMock = (gateway as any).server.to as jest.Mock;
+      expect(toMock).toHaveBeenCalledWith('room:ROOMD');
+      // room:state is emitted with hidden votes and revealed=false
+      const state = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
+      expect(state).toBeDefined();
+      expect(state.revealed).toBe(false);
+      expect('votes' in state).toBe(false);
+      expect('stats' in state).toBe(false);
+      expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 2, votedIds: [] });
+    });
+
+    it('non-host cannot set deck', () => {
+      const room = makeRoom('ROOMD2');
+      room.participants = [
+        { id: 'p1', name: 'Paula', role: 'player' },
+      ];
+      rooms.get.mockReturnValue(room);
+      (gateway as any).socketRoom.set('p1', 'ROOMD2');
+      const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
+
+      gateway.handleDeckSet({ deckId: 'tshirt' } as any, client);
+
+      expect(client.emit).toHaveBeenCalledWith(
+        'room:error',
+        expect.objectContaining({ code: 'forbidden' })
+      );
+      const toMock = (gateway as any).server.to as jest.Mock;
+      expect(toMock).not.toHaveBeenCalledWith('room:ROOMD2');
+    });
+
+    it('rejects invalid payload (empty deckId)', () => {
+      const room = makeRoom('ROOMD3');
+      room.participants = [
+        { id: 'h1', name: 'Hannah', role: 'host' },
+      ];
+      rooms.get.mockReturnValue(room);
+      (gateway as any).socketRoom.set('h1', 'ROOMD3');
+      const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
+
+      gateway.handleDeckSet({ deckId: '' } as any, host);
+
+      expect(host.emit).toHaveBeenCalledWith(
+        'room:error',
+        expect.objectContaining({ code: 'invalid_payload' })
+      );
+    });
+  });
 });
