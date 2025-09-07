@@ -1,0 +1,29 @@
+# Suggested Commands
+
+- Dev
+  - `npx nx serve web` — Angular dev server (proxies to API; depends on `api:serve`).
+  - `npx nx serve api` — NestJS server (watch mode via `@nx/js:node`).
+  - `npm run dev` — Serve both `api` and `web` together.
+- Build
+  - `npx nx build web` — Production build to `dist/web`.
+  - `npx nx build api` — Webpack build to `dist/api`.
+  - `npm run build` — Build both apps.
+- Test
+  - `npx nx test web` — Jest (Angular).
+  - `npx nx test api` — Jest (Nest).
+  - `npm test` — Run tests for all projects.
+- Lint
+  - `npx nx lint web` — ESLint for web (has `lint` target).
+  - `npx nx run api:eslint:lint` — ESLint for api (target named `eslint:lint`).
+  - `npm run lint` — Lint across projects (uses `lint` target where available).
+- Format (Prettier)
+  - `npx prettier --check .`
+  - `npx prettier --write .`
+- Project Graph
+  - `npx nx graph` — Open dependency graph in the browser.
+- Code Generation
+  - `npx nx g @nx/angular:component my-feature --project=web`
+  - `npx nx g @nx/nest:resource rooms --project=api` (example)
+- Misc
+  - `npx nx run web:serve-static` — Serve built SPA.
+  - `npx nx run api:preview` — Webpack dev server for API bundle.
