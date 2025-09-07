@@ -2,7 +2,7 @@ Title: FR-012 — Deep-link join (/r/:roomId)
 
 Summary
 - Opening a URL like `/r/:roomId` routes directly into the room join flow.
-- If a display name is saved locally, the app auto-joins the room.
+- If a display name is saved locally, the app auto-joins the room using the selected role (default player, or observer when `?role=observer`).
 - If the room is invalid, the UI shows an error with a “Create a new room” CTA.
 
 Implementation
@@ -29,4 +29,3 @@ Tests
 
 User Impact
 - Users can copy/share room URLs; teammates land directly in the join flow. If they’ve already joined before on this device, they reconnect faster with their saved name.
-

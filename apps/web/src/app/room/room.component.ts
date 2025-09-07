@@ -91,8 +91,8 @@ export class RoomComponent implements OnDestroy {
       const explicitRole = role === 'player' || role === 'observer';
       const shouldShowModal = !saved && !explicitRole;
       this.showJoinModal.set(shouldShowModal);
-      // Special-case: When arriving from Create Room with a saved name, auto-join as host
-      if (createdHost && saved) {
+      // Auto-join when a saved name exists (host or player/observer). Host is elevated by server.
+      if (saved && !shouldShowModal) {
         setTimeout(() => this.join());
       }
     });

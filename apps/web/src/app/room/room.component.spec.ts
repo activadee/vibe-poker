@@ -73,20 +73,18 @@ describe('RoomComponent (FR-014 Revote)', () => {
     expect(btn?.textContent).toContain('Join Room');
   });
 
-  it('deep-link with saved name does not auto-join', () => {
+  it('deep-link with saved name auto-joins', () => {
     jest.useFakeTimers();
     localStorage.setItem('displayName', 'Eve');
     paramMap$.next(convertToParamMap({ roomId: 'ROOM2' }));
 
     const fixture = TestBed.createComponent(RoomComponent);
     const comp = fixture.componentInstance as any;
-    const joinSpy = jest
-      .spyOn(comp, 'join')
-      .mockImplementation(() => undefined);
+    const joinSpy = jest.spyOn(comp, 'join').mockImplementation(() => undefined);
 
     // Flush any scheduled tasks
     jest.runOnlyPendingTimers();
-    expect(joinSpy).not.toHaveBeenCalled();
+    expect(joinSpy).toHaveBeenCalled();
     jest.useRealTimers();
   });
 
