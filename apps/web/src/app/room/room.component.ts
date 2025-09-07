@@ -163,6 +163,12 @@ export class RoomComponent implements OnDestroy {
     socket.emit('vote:reset', {});
   }
 
+  // FR-014: Post-reveal Revote CTA (no confirm)
+  revote() {
+    const socket = this.connect();
+    socket.emit('vote:reset', {});
+  }
+
   // UI helper for templates
   hasVoted(p: Participant): boolean {
     if (this.revealed()) return false;
