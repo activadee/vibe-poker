@@ -1,6 +1,25 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ['./src/**/*.{html,ts}'],
+  content: [
+    './src/**/*.{html,ts}',
+    // Fallback if cwd differs
+    './apps/web/src/**/*.{html,ts}',
+  ],
+  safelist: [
+    // Layout
+    'min-h-screen','flex','items-start','items-center','justify-center','justify-between','py-24','px-4','mb-6','mt-1','mt-3','mt-4','mb-8','block','w-full',
+    // Typography
+    'text-2xl','text-base','text-sm','font-semibold','font-medium','tracking-tight',
+    'text-slate-900','text-slate-700','text-slate-600','text-slate-500','text-red-600','text-white',
+    // Surfaces
+    'bg-white','bg-slate-100','bg-transparent','bg-surface','bg-surface-faint','bg-primary-900','hover:bg-primary-800',
+    // Borders & radius & shadow
+    'border','border-slate-200','rounded-md','rounded-xl','rounded-full','shadow-card','shadow-sm',
+    // Buttons sizing
+    'h-9','h-10','h-11','px-3','px-4','px-5',
+    // Focus styles
+    'focus-visible:outline-2','focus-visible:outline-offset-2','focus-visible:outline-primary-600','focus-visible:outline-primary-700',
+  ],
   theme: {
     extend: {
       colors: {
@@ -49,4 +68,3 @@ module.exports = {
   },
   plugins: [require('@tailwindcss/forms')],
 };
-
