@@ -9,14 +9,14 @@ Details
 - Lobby join: When joining from the lobby, we always navigate with an explicit role param:
   - Observer → `/r/:roomId?role=observer`
   - User → `/r/:roomId?role=player`
-- Room share links: The room view shows both links and the “Copy Invite” button copies the following text:
+- Room share links: The room view continues to show the standard room URL and a “Copy Link” button. Clicking it copies a formatted invite containing both explicit links:
   - `Join this room:`
   - `Join as observer: <origin>/r/<roomId>?role=observer`
   - `Join as user: <origin>/r/<roomId>?role=player`
 
 Implementation
 - Read param: `apps/web/src/app/room/room.component.ts` reads `role` from the route and preselects the observer checkbox when `role=observer`.
-- Share links: Added `shareUrlObserver` and `shareUrlPlayer` computed helpers and a `buildShareUrl()` method. The template shows both links and changes the button to “Copy Invite”.
+- Share links: Added `shareUrlObserver` and `shareUrlPlayer` computed helpers and a `buildShareUrl()` method. The template still shows the base URL; only the clipboard content changes.
 - Lobby navigation: `apps/web/src/app/lobby/lobby.component.ts` now always includes a `role` query param when navigating to a room.
 
 Tests
@@ -32,4 +32,3 @@ Files
 
 User Notes
 - Users can share either link depending on whether the invitee should join as a voter or an observer. The role can still be changed before joining.
-
