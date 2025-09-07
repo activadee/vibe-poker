@@ -286,6 +286,33 @@ describe('RoomComponent (FR-014 Revote)', () => {
     expect(copyBtn?.className).toContain('border-slate-200');
   });
 
+  it('shows vote progress pill when at least one vote is cast', () => {
+    component.joined.set(true);
+    component.voteCount.set(1);
+    component.voteTotal.set(3);
+    fixture.detectChanges();
+    const html = fixture.nativeElement as HTMLElement;
+    const pill = html.querySelector('.participants .progress-pill');
+    expect(pill).toBeTruthy();
+    expect(pill?.textContent).toContain('1/3 voted');
+  });
+
+  it('shows placeholder before reveal and actual value after reveal', () => {
+    component.joined.set(true);
+    component.revealed.set(false);
+    component.participants.set([{ id: 'p1', name: 'Alice', role: 'player' }]);
+    component.votes.set({ p1: '5' });
+    fixture.detectChanges();
+    const html = fixture.nativeElement as HTMLElement;
+    // Hidden (placeholder) when not revealed
+    expect(html.querySelector('.participants .vote')?.textContent?.trim()).toBe('—');
+
+    // After reveal the actual vote shows
+    component.revealed.set(true);
+    fixture.detectChanges();
+    expect(html.querySelector('.participants .vote')?.textContent?.trim()).toBe('5');
+  });
+
   it('disables voting and ignores cast when role is observer (FR-013)', () => {
     const fixture = TestBed.createComponent(RoomComponent);
     const comp = fixture.componentInstance as any;

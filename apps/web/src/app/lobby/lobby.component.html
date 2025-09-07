@@ -47,6 +47,8 @@
       </form>
     </app-ui-card>
 
-    <p class="mt-4 text-sm text-red-600" *ngIf="error()" role="alert">{{ error() }}</p>
+    @if (error()) {
+    <p class="mt-4 text-sm text-red-600" role="alert">{{ error() }}</p>
+    }
   </div>
 </div>
