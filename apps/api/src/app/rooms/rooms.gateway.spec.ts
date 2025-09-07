@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { Test } from '@nestjs/testing';
 import { RoomsGateway } from './rooms.gateway';
 import { RoomsService } from './rooms.service';
@@ -25,6 +26,7 @@ describe('RoomsGateway', () => {
             get: jest.fn(),
             addParticipant: jest.fn(),
             removeParticipant: jest.fn(),
+            remove: jest.fn(),
             castVote: jest.fn(),
             reset: jest.fn(),
             computeProgress: jest.fn(),
@@ -99,6 +101,23 @@ describe('RoomsGateway', () => {
     expect(client.emit).toHaveBeenCalledWith(
       'room:error',
       expect.objectContaining({ code: 'invalid_room' })
+    );
+    expect(client.join).not.toHaveBeenCalled();
+    expect(rooms.addParticipant).not.toHaveBeenCalled();
+  });
+
+  it('handleJoin emits expired error when room TTL passed', () => {
+    const expiredRoom = makeRoom('OLD1');
+    expiredRoom.expiresAt = Date.now() - 1000;
+    rooms.get.mockReturnValue(expiredRoom);
+    const client: any = { id: 's9', join: jest.fn(), emit: jest.fn() };
+
+    gateway.handleJoin({ roomId: 'OLD1', name: 'Zoe' }, client);
+
+    expect(rooms.remove).toHaveBeenCalledWith('OLD1');
+    expect(client.emit).toHaveBeenCalledWith(
+      'room:error',
+      expect.objectContaining({ code: 'expired' })
     );
     expect(client.join).not.toHaveBeenCalled();
     expect(rooms.addParticipant).not.toHaveBeenCalled();

@@ -118,6 +118,17 @@ export class RoomsGateway implements OnGatewayDisconnect {
       return;
     }
 
+    // FR-015: If room is expired, gracefully delete and inform client with 'expired' error
+    if (room.expiresAt <= Date.now()) {
+      this.rooms.remove(roomId);
+      const err: RoomErrorEvent = {
+        code: 'expired',
+        message: 'This room has expired. Please create a new room.',
+      };
+      client.emit('room:error', err);
+      return;
+    }
+
     // Join socket.io room
     client.join(this.roomKey(roomId));
     this.socketRoom.set(client.id, roomId);

@@ -12,7 +12,7 @@ export interface RoomJoinPayload {
 }
 
 export interface RoomErrorEvent {
-  code: 'invalid_payload' | 'invalid_room' | 'forbidden';
+  code: 'invalid_payload' | 'invalid_room' | 'forbidden' | 'expired';
   message: string;
 }
 
