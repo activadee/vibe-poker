@@ -22,6 +22,23 @@ describe('VoteCardsComponent', () => {
     expect(btns).toEqual(['1', '2', '3', '5', '8', '13', '21', '?', '☕']);
   });
 
+  it('updates rendered cards when values input changes', () => {
+    // Initially Fibonacci
+    let btns = Array.from(
+      fixture.nativeElement.querySelectorAll<HTMLButtonElement>('button.card')
+    ).map((b) => b.textContent?.trim());
+    expect(btns).toEqual(['1', '2', '3', '5', '8', '13', '21', '?', '☕']);
+
+    // Change to T-Shirt sizes
+    component.values = ['XS', 'S', 'M', 'L', 'XL', '?', '☕'];
+    fixture.detectChanges();
+
+    btns = Array.from(
+      fixture.nativeElement.querySelectorAll<HTMLButtonElement>('button.card')
+    ).map((b) => b.textContent?.trim());
+    expect(btns).toEqual(['XS', 'S', 'M', 'L', 'XL', '?', '☕']);
+  });
+
   it('emits selection and marks the clicked card selected', () => {
     const spy = jest.fn();
     component.valueSelected.subscribe(spy);
