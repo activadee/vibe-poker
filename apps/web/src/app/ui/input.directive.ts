@@ -1,7 +1,8 @@
 import { Directive, HostBinding } from '@angular/core';
 
 @Directive({
-  selector: 'input[appUiInput], textarea[appUiInput]'
+  selector: 'input[appUiInput], textarea[appUiInput]',
+  standalone: true
 })
 export class UiInputDirective {
   @HostBinding('class')
