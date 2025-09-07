@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { RoomComponent } from './room.component';
+import { By } from '@angular/platform-browser';
+import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
 import { io } from 'socket.io-client';
 
 // Mock socket.io client (factory-scoped to avoid hoist issues)
@@ -69,5 +71,23 @@ describe('RoomComponent (FR-014 Revote)', () => {
     // Inspect the last returned socket from io() and its emit calls
     const lastSocket = (io as jest.Mock).mock.results.at(-1)?.value as any;
     expect(lastSocket.emit).toHaveBeenCalledWith('vote:reset', {});
+  });
+
+  it('revote clears local card selection highlight', () => {
+    // Arrange: simulate a prior selection in VoteCards
+    component.joined.set(true);
+    fixture.detectChanges();
+    const vcDE = fixture.debugElement.query(By.directive(VoteCardsComponent));
+    const vc = vcDE.componentInstance as VoteCardsComponent;
+    vc.selected.set('5');
+    expect(vc.selected()).toBe('5');
+
+    // Act: reveal then revote
+    component.revealed.set(true);
+    fixture.detectChanges();
+    (html => (html.querySelector('button.btn.primary') as HTMLButtonElement).click())(fixture.nativeElement as HTMLElement);
+    
+    // Assert: selection cleared locally
+    expect(vc.selected()).toBeNull();
   });
 });
