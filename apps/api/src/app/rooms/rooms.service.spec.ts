@@ -11,14 +11,13 @@ describe('RoomsService', () => {
     service = moduleRef.get(RoomsService);
   });
 
-  it('creates a room with host and 24h TTL', () => {
+  it('creates a room with 24h TTL and no participants yet', () => {
     const before = Date.now();
-    const room = service.create('Alice');
+    const room = service.create('Alice', 'sid-1');
     const after = Date.now();
 
     expect(room.id).toMatch(/^[A-HJ-NP-Z]{4}-\d{4}$/);
-    expect(room.participants).toHaveLength(1);
-    expect(room.participants[0]).toMatchObject({ name: 'Alice', role: 'host' });
+    expect(room.participants).toHaveLength(0);
     expect(room.createdAt).toBeGreaterThanOrEqual(before);
     expect(room.createdAt).toBeLessThanOrEqual(after);
     const ttlMs = room.expiresAt - room.createdAt;
@@ -28,14 +27,14 @@ describe('RoomsService', () => {
 
   it('guards against collisions when generating IDs', () => {
     // Force add a room with a specific ID and ensure create() can still generate a new one
-    const existing = service.create('Host');
+    const existing = service.create('Host', 'sid-2');
     // Simulate map already contains this ID; create another and ensure it's different
-    const next = service.create('Bob');
+    const next = service.create('Bob', 'sid-3');
     expect(next.id).not.toEqual(existing.id);
   });
 
   it('removeExpired deletes rooms past TTL', () => {
-    const room = service.create('Eve');
+    const room = service.create('Eve', 'sid-4');
     // Advance time artificially by setting expiresAt in the past
     (room as any).expiresAt = Date.now() - 1;
     const removed = service.removeExpired();
@@ -44,7 +43,7 @@ describe('RoomsService', () => {
   });
 
   it('castVote stores value and overwrites on re-cast', () => {
-    const room = service.create('Hosty');
+    const room = service.create('Hosty', 'sid-5');
     // Add two participants (host + player)
     service.addParticipant(room.id, { id: 'h1', name: 'Hosty', role: 'host' });
     service.addParticipant(room.id, { id: 'p1', name: 'Player', role: 'player' });
@@ -57,7 +56,7 @@ describe('RoomsService', () => {
   });
 
   it('computeProgress counts only eligible voters (players + host)', () => {
-    const room = service.create('Hannah');
+    const room = service.create('Hannah', 'sid-10');
     service.addParticipant(room.id, { id: 'h1', name: 'Hannah', role: 'host' });
     service.addParticipant(room.id, { id: 'p1', name: 'Alice', role: 'player' });
     service.addParticipant(room.id, { id: 'obs', name: 'Olivia', role: 'observer' });
@@ -77,7 +76,7 @@ describe('RoomsService', () => {
 
   describe('computeStats (FR-009)', () => {
     it('excludes non-numeric cards and computes avg/median (odd count)', () => {
-      const room = service.create('Host');
+      const room = service.create('Host', 'sid-6');
       service.addParticipant(room.id, { id: 'h1', name: 'Host', role: 'host' });
       service.addParticipant(room.id, { id: 'p1', name: 'Alice', role: 'player' });
       service.addParticipant(room.id, { id: 'p2', name: 'Bob', role: 'player' });
@@ -92,7 +91,7 @@ describe('RoomsService', () => {
     });
 
     it('even count uses mean of middle two and rounds to 1 decimal', () => {
-      const room = service.create('Host');
+      const room = service.create('Host', 'sid-7');
       service.addParticipant(room.id, { id: 'h1', name: 'Host', role: 'host' });
       service.addParticipant(room.id, { id: 'p1', name: 'Alice', role: 'player' });
       service.addParticipant(room.id, { id: 'p2', name: 'Bob', role: 'player' });
@@ -106,7 +105,7 @@ describe('RoomsService', () => {
     });
 
     it('returns undefined when no numeric votes', () => {
-      const room = service.create('Host');
+      const room = service.create('Host', 'sid-8');
       service.addParticipant(room.id, { id: 'h1', name: 'Host', role: 'host' });
       service.addParticipant(room.id, { id: 'p1', name: 'Alice', role: 'player' });
       (room.votes as any) = { h1: '?', p1: '☕' };
@@ -116,7 +115,7 @@ describe('RoomsService', () => {
   });
 
   it('reset (FR-010) clears votes, hides reveal, and sets progress 0/Y', () => {
-    const room = service.create('Host');
+    const room = service.create('Host', 'sid-9');
     // Add eligible voters (host + two players) and one observer
     service.addParticipant(room.id, { id: 'h1', name: 'Host', role: 'host' });
     service.addParticipant(room.id, { id: 'p1', name: 'Alice', role: 'player' });

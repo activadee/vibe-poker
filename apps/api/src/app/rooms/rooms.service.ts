@@ -13,15 +13,20 @@ const MAX_ID_ATTEMPTS = 1000;
 export class RoomsService {
   private readonly logger = new Logger(RoomsService.name);
   private readonly rooms = new Map<string, Room>();
+  // Bind room ownership to a server-side session id (sid)
+  private readonly ownerByRoom = new Map<string, string>();
   private readonly ttlMs = DAY_MS;
 
   private logEvent(event: Record<string, unknown>) {
     this.logger.log(JSON.stringify(event));
   }
 
-  create(hostName: string): Room {
+  create(hostName: string, ownerSid: string): Room {
     if (!hostName || typeof hostName !== 'string') {
       throw new Error('Invalid host name');
+    }
+    if (!ownerSid || typeof ownerSid !== 'string') {
+      throw new Error('Invalid owner session');
     }
     const id = this.generateId();
     const now = Date.now();
@@ -29,15 +34,10 @@ export class RoomsService {
       id,
       createdAt: now,
       expiresAt: now + this.ttlMs,
-      participants: [
-        {
-          id: 'host',
-          name: hostName,
-          role: 'host',
-        },
-      ],
+      participants: [],
     };
     this.rooms.set(id, room);
+    this.ownerByRoom.set(id, ownerSid);
     this.logEvent({ event: 'room_create', room_id: id, host: hostName });
     return room;
   }
@@ -55,6 +55,7 @@ export class RoomsService {
   }
 
   remove(roomId: string): boolean {
+    this.ownerByRoom.delete(roomId);
     return this.rooms.delete(roomId);
   }
 
@@ -63,6 +64,7 @@ export class RoomsService {
     for (const [id, room] of this.rooms.entries()) {
       if (room.expiresAt <= now) {
         this.rooms.delete(id);
+        this.ownerByRoom.delete(id);
         removed++;
         this.logEvent({ event: 'room_expired', room_id: id });
       }
@@ -196,5 +198,9 @@ export class RoomsService {
       this.logEvent({ event: 'participant_removed', room_id: roomId, participant_id: participantId });
     }
     return room;
+  }
+
+  getOwner(roomId: string): string | undefined {
+    return this.ownerByRoom.get(roomId);
   }
 }

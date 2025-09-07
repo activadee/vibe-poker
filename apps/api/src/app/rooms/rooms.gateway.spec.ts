@@ -24,6 +24,7 @@ describe('RoomsGateway', () => {
           provide: RoomsService,
           useValue: {
             get: jest.fn(),
+            getOwner: jest.fn(),
             addParticipant: jest.fn(),
             removeParticipant: jest.fn(),
             remove: jest.fn(),
@@ -56,7 +57,7 @@ describe('RoomsGateway', () => {
       return { count: votedIds.length, total: eligible.length, votedIds };
     });
 
-    const client: any = { id: 's1', join: jest.fn(), emit: jest.fn() };
+    const client: any = { id: 's1', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'owner-1' } } };
 
     gateway.handleJoin({ roomId: 'ROOM1', name: 'Alice' }, client);
 
@@ -84,7 +85,7 @@ describe('RoomsGateway', () => {
       return { count: votedIds.length, total: eligible.length, votedIds };
     });
 
-    const client: any = { id: 'o1', join: jest.fn(), emit: jest.fn() };
+    const client: any = { id: 'o1', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'owner-2' } } };
     gateway.handleJoin({ roomId: 'ROOMOBS', name: 'Olivia', role: 'observer' } as any, client);
 
     expect(rooms.addParticipant).toHaveBeenCalledWith('ROOMOBS', { id: 'o1', name: 'Olivia', role: 'observer' });
@@ -94,7 +95,7 @@ describe('RoomsGateway', () => {
 
   it('handleJoin emits error when room missing', () => {
     rooms.get.mockReturnValue(undefined as any);
-    const client: any = { id: 's2', join: jest.fn(), emit: jest.fn() };
+    const client: any = { id: 's2', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'x' } } };
 
     gateway.handleJoin({ roomId: 'MISSING', name: 'Bob' }, client);
 
@@ -110,7 +111,7 @@ describe('RoomsGateway', () => {
     const expiredRoom = makeRoom('OLD1');
     expiredRoom.expiresAt = Date.now() - 1000;
     rooms.get.mockReturnValue(expiredRoom);
-    const client: any = { id: 's9', join: jest.fn(), emit: jest.fn() };
+    const client: any = { id: 's9', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'x' } } };
 
     gateway.handleJoin({ roomId: 'OLD1', name: 'Zoe' }, client);
 
@@ -124,7 +125,7 @@ describe('RoomsGateway', () => {
   });
 
   it('handleJoin emits error when payload invalid', () => {
-    const client: any = { id: 's3', join: jest.fn(), emit: jest.fn() };
+    const client: any = { id: 's3', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'x' } } };
     gateway.handleJoin({ roomId: '', name: '' } as any, client);
     expect(client.emit).toHaveBeenCalledWith(
       'room:error',
@@ -139,7 +140,7 @@ describe('RoomsGateway', () => {
     const afterJoin: Room = { ...room, participants: [{ id: 'sock', name: 'Eve', role: 'player' as const }] };
     rooms.addParticipant.mockReturnValue(afterJoin);
 
-    const client: any = { id: 'sock', join: jest.fn(), emit: jest.fn() };
+    const client: any = { id: 'sock', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'x' } } };
     gateway.handleJoin({ roomId: 'ROOMX', name: 'Eve' }, client);
 
     // Now disconnect
@@ -163,7 +164,7 @@ describe('RoomsGateway', () => {
     expect(toMock).not.toHaveBeenCalled();
   });
 
-  it('host disconnect inserts placeholder to preserve host on reload', () => {
+  it('host disconnect does not insert placeholder (ownership via session)', () => {
     const room = makeRoom('ROOMH');
     room.participants = [
       { id: 'host-sock', name: 'Hannah', role: 'host' },
@@ -186,7 +187,8 @@ describe('RoomsGateway', () => {
     gateway.handleDisconnect(client);
 
     expect(rooms.removeParticipant).toHaveBeenCalledWith('ROOMH', 'host-sock');
-    expect(rooms.addParticipant).toHaveBeenCalledWith('ROOMH', { id: 'host', name: 'Hannah', role: 'host' });
+    // No placeholder host reinsertion in session-owned model
+    expect(rooms.addParticipant).not.toHaveBeenCalledWith('ROOMH', expect.objectContaining({ role: 'host' }));
   });
 
   it('observer cannot cast vote', () => {

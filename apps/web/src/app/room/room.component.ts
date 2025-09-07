@@ -6,6 +6,8 @@ import {
   inject,
   signal,
   HostListener,
+  ElementRef,
+  effect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -45,6 +47,7 @@ import { UiCardComponent } from '../ui/card/card.component';
 })
 export class RoomComponent implements OnDestroy {
   @ViewChild(VoteCardsComponent) private cards?: VoteCardsComponent;
+  @ViewChild('joinNameInput') private joinNameInput?: ElementRef<HTMLInputElement>;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -105,6 +108,12 @@ export class RoomComponent implements OnDestroy {
       // Auto-join when a saved name exists (host/player/observer). Host elevation handled server-side.
       if (!shouldShowModal) {
         setTimeout(() => this.join());
+      }
+    });
+    // Focus the name input when the join modal is shown
+    effect(() => {
+      if (this.showJoinModal()) {
+        setTimeout(() => this.joinNameInput?.nativeElement?.focus());
       }
     });
   }
@@ -217,17 +226,25 @@ export class RoomComponent implements OnDestroy {
       `Join as observer: ${this.shareUrlObserver()}`,
       `Join as user: ${this.shareUrlPlayer()}`,
     ].join('\n');
-    // Prefer Web Share on supported devices, fallback to clipboard
     try {
-      const nav = (globalThis as unknown as { navigator?: Navigator }).navigator;
-      if (nav && 'share' in nav && typeof (nav as any).share === 'function') {
-        await (nav as any).share({ title: 'Planning Poker', text: invite });
+      const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
+      if (typeof nav.share === 'function') {
+        await nav.share({ title: 'Planning Poker', text: invite });
+      } else if (navigator.clipboard && 'writeText' in navigator.clipboard) {
+        await navigator.clipboard.writeText(invite);
       } else {
-        await nav?.clipboard?.writeText?.(invite);
+        const ta = document.createElement('textarea');
+        ta.value = invite;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
       }
-    } catch {
-      // Last-resort fallback to clipboard if share failed
-      try { await navigator.clipboard.writeText(invite); } catch {}
+    } catch (err) {
+      console.warn('Share/copy failed', err);
     }
     this.copied.set(true);
     setTimeout(() => this.copied.set(false), 1500);
@@ -331,7 +348,7 @@ export class RoomComponent implements OnDestroy {
 
   // Allow closing the modal with Escape (navigates back to lobby)
   @HostListener('window:keydown.escape', ['$event'])
-  onEscape(ev: KeyboardEvent) {
+  onEscape(ev: Event) {
     if (this.showJoinModal()) {
       ev.preventDefault();
       this.router.navigateByUrl('/');

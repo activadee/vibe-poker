@@ -88,13 +88,10 @@ describe('RoomComponent (FR-014 Revote)', () => {
     jest.useRealTimers();
   });
 
-  it('auto-joins as host when arriving from Create Room (host=1)', () => {
+  it('auto-joins when arriving from Create Room with saved name', () => {
     jest.useFakeTimers();
-    // Arrange: simulate saved host name and host flag in query
+    // Arrange: simulate saved host name from creation flow
     localStorage.setItem('displayName', 'Hosty');
-    const ar = TestBed.inject(ActivatedRoute) as any;
-    ar.snapshot = { queryParamMap: convertToParamMap({ host: '1' }) };
-
     // Update params to trigger constructor subscription
     paramMap$.next(convertToParamMap({ roomId: 'ROOMX' }));
 
