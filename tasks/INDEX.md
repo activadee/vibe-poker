@@ -15,6 +15,7 @@ This folder contains Functional Requirements (FR‑xxx) and Non‑Functional Req
 - FR‑011 Set Current Story
 - FR‑012 Deep‑Link Join
 - FR‑013 Observer Restrictions
+- FR‑020 Role‑Aware Invite Links
 - FR‑014 Revote / Next Story CTA
 - FR‑015 Room TTL Cleanup
 - FR‑016 Rate Limiting & Flood Guard

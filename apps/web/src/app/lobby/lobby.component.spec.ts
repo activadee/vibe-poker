@@ -82,12 +82,12 @@ describe('LobbyComponent', () => {
     expect(checkbox!.className).not.toContain('w-full');
   });
 
-  it('parses link and navigates on join', () => {
+  it('parses link and navigates on join (role=player by default)', () => {
     const fixture = TestBed.createComponent(LobbyComponent);
     const comp = fixture.componentInstance;
     comp.roomCode = 'https://example.com/r/ZZZZ-9999?utm=1';
     comp.joinRoom();
-    expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ZZZZ-9999']);
+    expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ZZZZ-9999'], { queryParams: { role: 'player' } });
   });
 
   it('passes role=observer when Join as observer is checked', () => {
@@ -97,5 +97,14 @@ describe('LobbyComponent', () => {
     comp.joinAsObserver = true;
     comp.joinRoom();
     expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ABCD-1234'], { queryParams: { role: 'observer' } });
+  });
+
+  it('passes role=player when observer is not selected', () => {
+    const fixture = TestBed.createComponent(LobbyComponent);
+    const comp = fixture.componentInstance as any;
+    comp.roomCode = 'ABCD-1234';
+    comp.joinAsObserver = false;
+    comp.joinRoom();
+    expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ABCD-1234'], { queryParams: { role: 'player' } });
   });
 });
