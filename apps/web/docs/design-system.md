@@ -15,12 +15,13 @@ Note: Tailwind is pinned to v3.4.x to align with Angular's current build pipelin
   - `shadow-card` for elevated cards.
   - `rounded-xl` (12px) for cards and controls.
 
-Configuration lives in `apps/web/tailwind.config.cjs`. Global Tailwind layers are declared in `apps/web/src/styles.scss`.
+Configuration lives in `apps/web/tailwind.config.js`. Global Tailwind layers are declared in `apps/web/src/styles.scss`.
 
 ## Reusable UI Primitives
 
 - `button[appUiButton]`
-  - Inputs: `appUiButton` variant `primary | secondary | ghost` (default `primary`), `size` `sm | md | lg`.
+  - Inputs: `variant` `primary | secondary | ghost` (default `primary`), `size` `sm | md | lg`.
+  - Shorthand: you may also pass the variant via the directive value: `appUiButton="secondary"`.
   - Applies accessible focus styles and disabled state.
 - `input[appUiInput]` and `textarea[appUiInput]`
   - Standard text inputs with focus ring and placeholder styling.
@@ -53,6 +54,7 @@ Files touched:
 <!-- Button -->
 <button appUiButton>Primary</button>
 <button appUiButton variant="secondary">Secondary</button>
+<button appUiButton="ghost">Ghost (shorthand)</button>
 
 <!-- Input + label -->
 <label for="name" class="block text-sm font-medium text-slate-700">Name</label>

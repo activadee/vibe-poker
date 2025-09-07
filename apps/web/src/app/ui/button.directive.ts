@@ -9,10 +9,18 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
 })
 export class UiButtonDirective {
   private _variant: ButtonVariant = 'primary';
+  // When the directive is used as a boolean attribute (e.g., appUiButton),
+  // you can still pass a value: appUiButton="secondary". We keep supporting
+  // this while also exposing a dedicated `variant` input for clarity.
   @Input('appUiButton') set variantInput(v: ButtonVariant | '' | undefined) {
     this._variant = (v && v.length ? v : 'primary') as ButtonVariant;
   }
-  get variant(): ButtonVariant { return this._variant; }
+  // Explicit variant input takes precedence when provided.
+  private _explicitVariant: ButtonVariant | undefined;
+  @Input() set variant(v: ButtonVariant | undefined) {
+    this._explicitVariant = v;
+  }
+  get variant(): ButtonVariant { return this._explicitVariant ?? this._variant; }
   @Input() size: ButtonSize = 'md';
 
   @HostBinding('class')
