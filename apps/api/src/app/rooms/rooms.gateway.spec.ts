@@ -409,4 +409,91 @@ describe('RoomsGateway', () => {
     const state = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
     expect(state.story).toEqual({ id: 'S-1', title: 'Feature A', notes: 'Some notes' });
   });
+
+  it('rate limits per-socket on vote:cast (excess dropped)', () => {
+    const room = makeRoom('ROOMRL1');
+    room.participants = [
+      { id: 'p1', name: 'Alice', role: 'player' },
+    ];
+    rooms.get.mockReturnValue(room);
+    rooms.castVote.mockImplementation((roomId: string, pid: string, v: string) => {
+      room.votes = room.votes ?? {};
+      room.votes[pid] = v;
+      return room;
+    });
+    rooms.computeProgress.mockImplementation((r: Room) => {
+      const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
+      const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
+      return { count: votedIds.length, total: eligible.length, votedIds };
+    });
+
+    // Map socket and set IP
+    (gateway as any).socketRoom.set('p1', 'ROOMRL1');
+    const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn(), handshake: { address: '1.1.1.1' } };
+
+    // Default limiter allows 5 ops/sec per socket; send 6 quickly
+    for (let i = 0; i < 6; i++) {
+      gateway.handleVoteCast({ value: '5' } as any, client);
+    }
+
+    // Only first 5 should reach service
+    expect(rooms.castVote).toHaveBeenCalledTimes(5);
+    // Should emit a rate_limited error for the last one
+    expect(client.emit.mock.calls.some((c: any[]) => c[0] === 'room:error' && c[1]?.code === 'rate_limited')).toBe(true);
+  });
+
+  it('rate limits per-IP across sockets on vote:cast', () => {
+    const room = makeRoom('ROOMRL2');
+    room.participants = [
+      { id: 'a', name: 'A', role: 'player' },
+      { id: 'b', name: 'B', role: 'player' },
+    ];
+    rooms.get.mockReturnValue(room);
+    rooms.castVote.mockImplementation((roomId: string, pid: string, v: string) => {
+      room.votes = room.votes ?? {};
+      room.votes[pid] = v;
+      return room;
+    });
+    rooms.computeProgress.mockImplementation((r: Room) => {
+      const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
+      const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
+      return { count: votedIds.length, total: eligible.length, votedIds };
+    });
+
+    // Two clients behind same IP
+    (gateway as any).socketRoom.set('a', 'ROOMRL2');
+    (gateway as any).socketRoom.set('b', 'ROOMRL2');
+    const A: any = { id: 'a', join: jest.fn(), emit: jest.fn(), handshake: { address: '2.2.2.2' } };
+    const B: any = { id: 'b', join: jest.fn(), emit: jest.fn(), handshake: { address: '2.2.2.2' } };
+
+    // Per-IP limit default is 8/sec. Do 5 from A, 3 from B (ok so far), then one more from B -> should rate limit
+    for (let i = 0; i < 5; i++) gateway.handleVoteCast({ value: '1' } as any, A);
+    for (let i = 0; i < 3; i++) gateway.handleVoteCast({ value: '1' } as any, B);
+    gateway.handleVoteCast({ value: '1' } as any, B); // 9th -> exceeds IP bucket
+
+    // Service should have been hit 8 times in total
+    expect(rooms.castVote).toHaveBeenCalledTimes(8);
+    expect(B.emit.mock.calls.some((c: any[]) => c[0] === 'room:error' && c[1]?.code === 'rate_limited')).toBe(true);
+  });
+
+  it('drops oversized payloads with invalid_payload', () => {
+    const room = makeRoom('ROOMBIG');
+    room.participants = [
+      { id: 'h1', name: 'Hannah', role: 'host' },
+    ];
+    rooms.get.mockReturnValue(room);
+    (gateway as any).socketRoom.set('h1', 'ROOMBIG');
+    const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn(), handshake: { address: '3.3.3.3' } };
+
+    const bigNotes = 'x'.repeat(3000); // > 2KB
+    gateway.handleStorySet({ story: { id: 'S-big', title: 'T', notes: bigNotes } } as any, host);
+
+    expect(host.emit).toHaveBeenCalledWith(
+      'room:error',
+      expect.objectContaining({ code: 'invalid_payload' })
+    );
+    // No broadcast should have occurred for room:state
+    const toMock = (gateway as any).server.to as jest.Mock;
+    expect(toMock).not.toHaveBeenCalledWith('room:ROOMBIG');
+  });
 });

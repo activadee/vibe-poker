@@ -9,6 +9,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Injectable, Logger } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
+import { z } from 'zod';
 import type {
   Participant,
   Room,
@@ -36,11 +37,93 @@ export class RoomsGateway implements OnGatewayDisconnect {
   private readonly logger = new Logger(RoomsGateway.name);
   // track which room a socket joined
   private readonly socketRoom = new Map<string, string>();
+  // Simple token bucket based rate limiter (per-socket and per-IP)
+  private readonly rateLimiter = createRateLimiter();
+
+  // Zod schemas for payload validation
+  private readonly schemas = {
+    join: z
+      .object({
+        roomId: z.string().trim().min(1),
+        name: z.string().trim().min(1),
+        secret: z.string().optional(),
+        role: z.union([z.literal('observer'), z.literal('player')]).optional(),
+      })
+      .strict(),
+    voteCast: z
+      .object({
+        value: z.string().trim().min(1),
+      })
+      .strict(),
+    voteReveal: z.object({}).strict(),
+    voteReset: z.object({}).strict(),
+    storySet: z
+      .object({
+        story: z
+          .object({
+            id: z.string().trim().min(1).optional(),
+            title: z.string().trim().min(1),
+            notes: z.string().optional(),
+          })
+          .strict(),
+      })
+      .strict(),
+    deckSet: z
+      .object({
+        deckId: z.string().trim().min(1),
+      })
+      .strict(),
+  } as const;
 
   constructor(private readonly rooms: RoomsService) {}
 
   private logEvent(event: Record<string, unknown>) {
     this.logger.log(JSON.stringify(event));
+  }
+
+  private clientIp(client: Socket): string {
+    // socket.io provides peer IP via handshake.address
+    // Note: in proxied environments, this may be a private IP unless trust proxy is configured upstream.
+    return (client.handshake as any)?.address || 'unknown';
+  }
+
+  private tooLarge(payload: unknown): boolean {
+    const MAX_BYTES = 2 * 1024; // 2KB limit per message
+    try {
+      const size = Buffer.byteLength(JSON.stringify(payload ?? {}), 'utf8');
+      return size > MAX_BYTES;
+    } catch {
+      return true;
+    }
+  }
+
+  private enforceLimits(
+    event: 'room:join' | 'vote:cast' | 'vote:reveal' | 'vote:reset',
+    client: Socket
+  ): boolean {
+    const ip = this.clientIp(client);
+    if (!this.rateLimiter.allow({ socketId: client.id, ip, event })) {
+      const err: RoomErrorEvent = { code: 'rate_limited', message: 'Too many requests. Please slow down.' };
+      client.emit('room:error', err);
+      this.logEvent({ event: 'rate_limited', action: event, ip, socket_id: client.id });
+      return false;
+    }
+    return true;
+  }
+
+  private validate<T>(schema: z.ZodSchema<T>, payload: unknown, client: Socket): payload is T {
+    if (this.tooLarge(payload)) {
+      const err: RoomErrorEvent = { code: 'invalid_payload', message: 'Payload too large' };
+      client.emit('room:error', err);
+      return false;
+    }
+    const res = schema.safeParse(payload ?? {});
+    if (!res.success) {
+      const err: RoomErrorEvent = { code: 'invalid_payload', message: 'Invalid payload' };
+      client.emit('room:error', err);
+      return false;
+    }
+    return true;
   }
 
   private roomKey(roomId: string): string {
@@ -96,17 +179,10 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() payload: RoomJoinPayload,
     @ConnectedSocket() client: Socket
   ) {
-    const roomId = payload?.roomId?.trim();
-    const name = payload?.name?.trim();
-
-    if (!roomId || !name) {
-      const err: RoomErrorEvent = {
-        code: 'invalid_payload',
-        message: 'roomId and name are required',
-      };
-      client.emit('room:error', err);
-      return;
-    }
+    if (!this.enforceLimits('room:join', client)) return;
+    if (!this.validate(this.schemas.join, payload, client)) return;
+    const roomId = payload.roomId.trim();
+    const name = payload.name.trim();
 
     const room = this.rooms.get(roomId);
     if (!room) {
@@ -173,6 +249,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() payload: VoteCastPayload,
     @ConnectedSocket() client: Socket
   ) {
+    if (!this.enforceLimits('vote:cast', client)) return;
+    if (!this.validate(this.schemas.voteCast, payload, client)) return;
     const ctx = this.getContext(client);
     if (!ctx) return;
     const { roomId, room, me } = ctx;
@@ -196,6 +274,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() _payload: VoteRevealPayload,
     @ConnectedSocket() client: Socket
   ) {
+    if (!this.enforceLimits('vote:reveal', client)) return;
+    if (!this.validate(this.schemas.voteReveal, _payload ?? {}, client)) return;
     const ctx = this.getContext(client);
     if (!ctx) return;
     const { roomId, room, me } = ctx;
@@ -216,6 +296,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() _payload: VoteResetPayload,
     @ConnectedSocket() client: Socket
   ) {
+    if (!this.enforceLimits('vote:reset', client)) return;
+    if (!this.validate(this.schemas.voteReset, _payload ?? {}, client)) return;
     const ctx = this.getContext(client);
     if (!ctx) return;
     const { roomId, room, me } = ctx;
@@ -236,6 +318,8 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() payload: StorySetPayload,
     @ConnectedSocket() client: Socket
   ) {
+    // Story and deck updates are host-only but can be spammed; optional rate limits can be added later
+    if (!this.validate(this.schemas.storySet, payload, client)) return;
     const ctx = this.getContext(client);
     if (!ctx) return;
     const { roomId, room, me } = ctx;
@@ -274,6 +358,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() payload: DeckSetPayload,
     @ConnectedSocket() client: Socket
   ) {
+    if (!this.validate(this.schemas.deckSet, payload, client)) return;
     const ctx = this.getContext(client);
     if (!ctx) return;
     const { roomId, room, me } = ctx;
@@ -291,4 +376,59 @@ export class RoomsGateway implements OnGatewayDisconnect {
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
   }
+}
+
+// ---------- Simple token bucket limiter ----------
+type LimitedEvent = 'room:join' | 'vote:cast' | 'vote:reveal' | 'vote:reset';
+
+class TokenBucket {
+  private tokens: number;
+  private lastRefill: number;
+  constructor(private capacity: number, private refillTokens: number, private refillIntervalMs: number) {
+    this.tokens = capacity;
+    this.lastRefill = Date.now();
+  }
+  tryConsume(cost = 1, now = Date.now()): boolean {
+    // Refill based on elapsed intervals
+    const elapsed = now - this.lastRefill;
+    if (elapsed >= this.refillIntervalMs) {
+      const intervals = Math.floor(elapsed / this.refillIntervalMs);
+      this.tokens = Math.min(this.capacity, this.tokens + intervals * this.refillTokens);
+      this.lastRefill += intervals * this.refillIntervalMs;
+    }
+    if (this.tokens >= cost) {
+      this.tokens -= cost;
+      return true;
+    }
+    return false;
+  }
+}
+
+function createRateLimiter() {
+  // Reasonable defaults: per-socket 5 ops/sec; per-IP 8 ops/sec for sensitive events
+  const SOCKET_LIMIT = 5;
+  const IP_LIMIT = 8;
+  const refillMs = 1000;
+  const perSocket = new Map<string, TokenBucket>();
+  const perIp = new Map<string, TokenBucket>();
+  const limitedEvents = new Set<LimitedEvent>(['room:join', 'vote:cast', 'vote:reveal', 'vote:reset']);
+  return {
+    allow({ socketId, ip, event }: { socketId: string; ip: string; event: LimitedEvent }): boolean {
+      if (!limitedEvents.has(event)) return true;
+      let sb = perSocket.get(socketId);
+      if (!sb) {
+        sb = new TokenBucket(SOCKET_LIMIT, SOCKET_LIMIT, refillMs);
+        perSocket.set(socketId, sb);
+      }
+      if (!sb.tryConsume(1)) return false;
+
+      let ib = perIp.get(ip);
+      if (!ib) {
+        ib = new TokenBucket(IP_LIMIT, IP_LIMIT, refillMs);
+        perIp.set(ip, ib);
+      }
+      if (!ib.tryConsume(1)) return false;
+      return true;
+    },
+  };
 }
