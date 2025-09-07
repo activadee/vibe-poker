@@ -32,10 +32,10 @@
           >
           <input
             id="joinName"
+            #joinNameInput
             appUiInput
             [(ngModel)]="name"
             (keyup.enter)="join()"
-            autofocus
             placeholder="Alice"
           />
         </div>

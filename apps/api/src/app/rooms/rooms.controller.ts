@@ -17,7 +17,7 @@ export class RoomsController {
     // Ensure a stable per-session uid for ownership tying
     const anyReq = req as unknown as { session?: { uid?: string } };
     if (!anyReq.session) {
-      throw new BadRequestException('Session not initialized');
+      (anyReq as any).session = {};
     }
     if (!anyReq.session.uid) {
       anyReq.session.uid = crypto.randomUUID();
