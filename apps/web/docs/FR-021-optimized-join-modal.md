@@ -5,15 +5,16 @@ Summary
 - Only show the modal if all of the following are true:
   - No username is found in local storage.
   - The current user is not the host (implicit before joining).
-  - The URL does not include an explicit `role=user|observer` query param.
+  - The URL does not include an explicit `role=player|observer` query param.
 
 Details
 - Route: `/r/:roomId` remains unchanged.
 - Detection: On entering the room route, `RoomComponent` checks `localStorage.displayName` and the `role` query param.
   - If `role=observer`, the observer checkbox is preselected and the modal is suppressed.
-  - If `role=user`, the modal is suppressed.
+  - If `role=player`, the modal is suppressed.
   - Otherwise, and if no saved username exists, the join modal opens.
-- Backward compatibility: `role=player` is still understood as a voter role for preselection, but it will not suppress the modal. New links use `role=user`.
+Backward compatibility
+- If older links use `role=player`, they behave as the explicit voter role and suppress the modal as expected.
 
 Implementation
 - UI: A lightweight modal overlay is rendered from `RoomComponent` (`.modal-backdrop` + `.modal`).
@@ -27,7 +28,7 @@ Files
 
 Tests
 - Updated room tests to check for the presence of the join modal when deep‑linking without a saved name.
-- Added expectations for the new `role=user` share and lobby links.
+- Added expectations for the `role=player` share and lobby links.
 
 User Notes
-- If you already saved your name on this device or join via a link with `?role=user` or `?role=observer`, the modal will not appear.
+- If you already saved your name on this device or join via a link with `?role=player` or `?role=observer`, the modal will not appear.

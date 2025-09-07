@@ -90,11 +90,11 @@ describe('RoomComponent (FR-014 Revote)', () => {
     jest.useRealTimers();
   });
 
-  it('does not open join modal when role=user is present', () => {
+  it('does not open join modal when role=player is present', () => {
     localStorage.removeItem('displayName');
-    // Inject role=user into route snapshot
+    // Inject role=player into route snapshot
     const ar = TestBed.inject(ActivatedRoute) as any;
-    ar.snapshot = { queryParamMap: convertToParamMap({ role: 'user' }) };
+    ar.snapshot = { queryParamMap: convertToParamMap({ role: 'player' }) };
 
     paramMap$.next(convertToParamMap({ roomId: 'ROOM3' }));
 
@@ -229,7 +229,7 @@ describe('RoomComponent (FR-014 Revote)', () => {
     const calledWith: string = (navigator as any).clipboard.writeText.mock.calls[0][0];
     expect(calledWith).toContain('Join this room:');
     expect(calledWith).toContain('Join as observer: http://localhost/r/ROOM9?role=observer');
-    expect(calledWith).toContain('Join as user: http://localhost/r/ROOM9?role=user');
+    expect(calledWith).toContain('Join as user: http://localhost/r/ROOM9?role=player');
   });
 
   it('revote clears local card selection highlight', () => {

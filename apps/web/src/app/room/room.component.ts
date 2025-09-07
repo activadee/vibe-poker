@@ -1,4 +1,11 @@
-import { Component, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  ViewChild,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -32,7 +39,7 @@ export class RoomComponent implements OnDestroy {
   // Base URL for sharing; we expose explicit role variants instead of a bare URL
   url = '';
   readonly shareUrlObserver = computed(() => this.buildShareUrl('observer'));
-  readonly shareUrlUser = computed(() => this.buildShareUrl('user'));
+  readonly shareUrlPlayer = computed(() => this.buildShareUrl('player'));
 
   name = '';
   // Join preferences
@@ -76,13 +83,11 @@ export class RoomComponent implements OnDestroy {
       }
       // Apply role preference from query param if present
       const role = this.route.snapshot.queryParamMap.get('role');
-      // Accept both 'user' (new) and legacy 'player' as the voter role; 'observer' remains observer
       this.joinAsObserver = role === 'observer';
       // Decide whether to open the join modal per requirements:
-      // Only when no saved username, not host (implicit pre-join), and role param is not 'user' or 'observer'.
-      const explicitRole = role === 'user' || role === 'observer';
+      // Only when no saved username, not host (implicit pre-join), and role param is not 'player' or 'observer'.
+      const explicitRole = role === 'player' || role === 'observer';
       this.showJoinModal.set(!saved && !explicitRole);
-      // Do not auto-join: allow user to confirm role before joining
     });
   }
 
@@ -119,12 +124,16 @@ export class RoomComponent implements OnDestroy {
     socket.on('connect', () => {
       if (socket.id) this.socketId.set(socket.id);
     });
-    socket.on('room:error', (err: RoomErrorEvent | { message?: string } | undefined) => {
-      const message = err && 'message' in err && typeof err.message === 'string'
-        ? err.message
-        : 'Something went wrong joining the room';
-      this.error.set(message);
-    });
+    socket.on(
+      'room:error',
+      (err: RoomErrorEvent | { message?: string } | undefined) => {
+        const message =
+          err && 'message' in err && typeof err.message === 'string'
+            ? err.message
+            : 'Something went wrong joining the room';
+        this.error.set(message);
+      }
+    );
     socket.on('room:state', (room: Room) => {
       if (!room || room.id !== this.roomId()) return;
       this.participants.set(room.participants ?? []);
@@ -188,7 +197,7 @@ export class RoomComponent implements OnDestroy {
     const invite = [
       'Join this room:',
       `Join as observer: ${this.shareUrlObserver()}`,
-      `Join as user: ${this.shareUrlUser()}`,
+      `Join as user: ${this.shareUrlPlayer()}`,
     ].join('\n');
     await navigator.clipboard.writeText(invite);
     this.copied.set(true);
@@ -221,7 +230,9 @@ export class RoomComponent implements OnDestroy {
     socket.emit('vote:reset', {});
   }
   private genStoryId(): string {
-    return `S-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    return `S-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 6)}`;
   }
 
   saveStory() {
@@ -247,8 +258,26 @@ export class RoomComponent implements OnDestroy {
   }
 
   // FR-017: Deck presets mapping used to render vote cards
-  private static readonly FIBONACCI: string[] = ['1', '2', '3', '5', '8', '13', '21', '?', '☕'];
-  private static readonly TSHIRT: string[] = ['XS', 'S', 'M', 'L', 'XL', '?', '☕'];
+  private static readonly FIBONACCI: string[] = [
+    '1',
+    '2',
+    '3',
+    '5',
+    '8',
+    '13',
+    '21',
+    '?',
+    '☕',
+  ];
+  private static readonly TSHIRT: string[] = [
+    'XS',
+    'S',
+    'M',
+    'L',
+    'XL',
+    '?',
+    '☕',
+  ];
 
   deckValues() {
     const d = this.deckId();
@@ -264,7 +293,7 @@ export class RoomComponent implements OnDestroy {
     socket.emit('deck:set', { deckId });
   }
 
-  private buildShareUrl(role: 'observer' | 'user'): string {
+  private buildShareUrl(role: 'observer' | 'player'): string {
     const origin = typeof location !== 'undefined' ? location.origin : '';
     const base = `${origin}/r/${encodeURIComponent(this.roomId())}`;
     const query = `role=${encodeURIComponent(role)}`;
