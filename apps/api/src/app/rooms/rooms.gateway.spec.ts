@@ -71,6 +71,25 @@ describe('RoomsGateway', () => {
     expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 1, votedIds: [] });
   });
 
+  it('handleJoin honors requested observer role (not counted in progress)', () => {
+    const room = makeRoom('ROOMOBS');
+    rooms.get.mockReturnValue(room);
+    const updated: Room = { ...room, participants: [{ id: 'o1', name: 'Olivia', role: 'observer' as const }] };
+    rooms.addParticipant.mockReturnValue(updated);
+    rooms.computeProgress.mockImplementation((r: Room) => {
+      const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
+      const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
+      return { count: votedIds.length, total: eligible.length, votedIds };
+    });
+
+    const client: any = { id: 'o1', join: jest.fn(), emit: jest.fn() };
+    gateway.handleJoin({ roomId: 'ROOMOBS', name: 'Olivia', role: 'observer' } as any, client);
+
+    expect(rooms.addParticipant).toHaveBeenCalledWith('ROOMOBS', { id: 'o1', name: 'Olivia', role: 'observer' });
+    // Progress excludes observers
+    expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 0, votedIds: [] });
+  });
+
   it('handleJoin emits error when room missing', () => {
     rooms.get.mockReturnValue(undefined as any);
     const client: any = { id: 's2', join: jest.fn(), emit: jest.fn() };
@@ -255,7 +274,7 @@ describe('RoomsGateway', () => {
     const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
 
     // Trigger a state broadcast via story:set (host-only)
-    gateway.handleStorySet({ story: 'XYZ' } as any, host);
+    gateway.handleStorySet({ story: { id: 'S-x', title: 'XYZ' } } as any, host);
     const stateBefore = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
     expect(stateBefore).toBeDefined();
     expect('votes' in stateBefore).toBe(false);
@@ -327,5 +346,48 @@ describe('RoomsGateway', () => {
     // Should not broadcast to room
     const toMock = (gateway as any).server.to as jest.Mock;
     expect(toMock).not.toHaveBeenCalledWith('room:ROOMR2');
+  });
+
+  it('non-host cannot set story', () => {
+    const room = makeRoom('ROOMS');
+    room.participants = [
+      { id: 'p1', name: 'Paula', role: 'player' },
+    ];
+    rooms.get.mockReturnValue(room);
+    (gateway as any).socketRoom.set('p1', 'ROOMS');
+    const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
+
+    gateway.handleStorySet({ story: { id: 'S-1', title: 'A' } } as any, client);
+
+    expect(client.emit).toHaveBeenCalledWith(
+      'room:error',
+      expect.objectContaining({ code: 'forbidden' })
+    );
+    const toMock = (gateway as any).server.to as jest.Mock;
+    expect(toMock).not.toHaveBeenCalledWith('room:ROOMS');
+  });
+
+  it('story:set validates payload and broadcasts on success', () => {
+    const room = makeRoom('ROOMS2');
+    room.participants = [
+      { id: 'h1', name: 'Hannah', role: 'host' },
+    ];
+    rooms.get.mockReturnValue(room);
+    (gateway as any).socketRoom.set('h1', 'ROOMS2');
+    const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
+
+    // invalid: empty title
+    gateway.handleStorySet({ story: { id: 'S-1', title: '' } } as any, host);
+    expect(host.emit).toHaveBeenCalledWith(
+      'room:error',
+      expect.objectContaining({ code: 'invalid_payload' })
+    );
+
+    // valid
+    gateway.handleStorySet({ story: { id: 'S-1', title: 'Feature A', notes: 'Some notes' } } as any, host);
+    const toMock = (gateway as any).server.to as jest.Mock;
+    expect(toMock).toHaveBeenCalledWith('room:ROOMS2');
+    const state = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
+    expect(state.story).toEqual({ id: 'S-1', title: 'Feature A', notes: 'Some notes' });
   });
 });

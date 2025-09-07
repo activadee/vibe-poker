@@ -2,7 +2,7 @@ import { Component, OnDestroy, ViewChild, computed, inject, signal } from '@angu
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import type { Room, RoomErrorEvent, VoteProgressEvent, Participant, VoteStats } from '@scrum-poker/shared-types';
+import type { Room, RoomErrorEvent, VoteProgressEvent, Participant, VoteStats, Story, RoomJoinPayload } from '@scrum-poker/shared-types';
 import { io, Socket } from 'socket.io-client';
 import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
 
@@ -23,11 +23,15 @@ export class RoomComponent implements OnDestroy {
   url = '';
 
   name = '';
+  // Join preferences
+  joinAsObserver = false;
   error = signal('');
   joined = signal(false);
   participants = signal<Room['participants']>([]);
   revealed = signal(false);
-  story = signal('');
+  story = signal<Story | null>(null);
+  storyTitleModel = '';
+  storyNotesModel = '';
   deckId = signal<'fibonacci' | string>('fibonacci');
   votes = signal<Record<string, string>>({});
   // FR-009 results stats
@@ -55,9 +59,11 @@ export class RoomComponent implements OnDestroy {
       const saved = localStorage.getItem('displayName') ?? '';
       if (saved) {
         this.name = saved;
-        // defer join slightly to allow view to settle
-        setTimeout(() => this.join(), 0);
       }
+      // Apply role preference from query param if present
+      const role = this.route.snapshot.queryParamMap.get('role');
+      this.joinAsObserver = role === 'observer';
+      // Do not auto-join: allow user to confirm role before joining
     });
   }
 
@@ -104,7 +110,10 @@ export class RoomComponent implements OnDestroy {
       if (!room || room.id !== this.roomId()) return;
       this.participants.set(room.participants ?? []);
       this.revealed.set(!!room.revealed);
-      this.story.set(room.story ?? '');
+      this.story.set(room.story ?? null);
+      // Seed editor models for host convenience
+      this.storyTitleModel = room.story?.title ?? '';
+      this.storyNotesModel = room.story?.notes ?? '';
       this.deckId.set(room.deckId ?? 'fibonacci');
       this.votes.set(room.votes ?? {});
       this.stats.set(room.revealed && room.stats ? room.stats : null);
@@ -128,7 +137,14 @@ export class RoomComponent implements OnDestroy {
     this.error.set('');
     localStorage.setItem('displayName', name);
     const socket = this.connect();
-    socket.emit('room:join', { roomId: this.roomId(), name });
+    let payload: RoomJoinPayload = {
+      roomId: this.roomId(),
+      name,
+    };
+    if (this.joinAsObserver) {
+      payload = { ...payload, role: 'observer' };
+    }
+    socket.emit('room:join', payload);
   }
 
   leave() {
@@ -164,12 +180,29 @@ export class RoomComponent implements OnDestroy {
     socket.emit('vote:reset', {});
   }
 
-  // FR-014: Post-reveal Revote CTA (no confirm)
   revote() {
     // Clear local selection highlight immediately to avoid stale UI
     this.cards?.clearSelection();
     const socket = this.connect();
     socket.emit('vote:reset', {});
+  }
+  private genStoryId(): string {
+    return `S-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  }
+
+  saveStory() {
+    if (this.myRole() !== 'host') return;
+    const title = (this.storyTitleModel ?? '').trim();
+    const notes = (this.storyNotesModel ?? '').toString();
+    if (!title) return;
+    const socket = this.connect();
+    const existing = this.story();
+    const payload: Story = {
+      id: existing?.id || this.genStoryId(),
+      title,
+      ...(notes.trim() ? { notes } : {}),
+    };
+    socket.emit('story:set', { story: payload });
   }
 
   // UI helper for templates

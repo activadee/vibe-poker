@@ -97,7 +97,7 @@ export class RoomsService {
     if (!room) throw new Error('Room not found');
     room.revealed = false;
     room.votes = {};
-    delete (room as any).stats;
+    delete room.stats;
     return room;
   }
 

@@ -21,6 +21,7 @@ import type {
   DeckSetPayload,
   VoteProgressEvent,
 } from '@scrum-poker/shared-types';
+import type { Story } from '@scrum-poker/shared-types';
 
 @Injectable()
 @WebSocketGateway({
@@ -67,15 +68,15 @@ export class RoomsGateway implements OnGatewayDisconnect {
   private safeRoom(room: Room): Room {
     // Hide votes before reveal to avoid leaking values
     if (!room.revealed) {
-      const { votes: _omitted, stats: _stats_omitted, ...rest } = room as any;
-      return rest as Room;
+      const { votes: _omitted, stats: _stats_omitted, ...rest } = room;
+      return rest;
     }
     // When revealed, compute and attach stats derived from numeric votes
     const stats = this.rooms.computeStats(room);
     if (stats) {
-      (room as any).stats = stats;
+      room.stats = stats;
     } else {
-      delete (room as any).stats;
+      delete room.stats;
     }
     return room;
   }
@@ -123,11 +124,12 @@ export class RoomsGateway implements OnGatewayDisconnect {
 
     // Add participant (allow duplicate names; socket.id is unique)
     // If the room contains a placeholder host entry matching the name, elevate to host
+    const requestedRole = payload?.role;
     const shouldBeHost = !!room.participants.find((p) => p.role === 'host' && p.name === name);
     const participant: Participant = {
       id: client.id,
       name,
-      role: shouldBeHost ? 'host' : 'player',
+      role: shouldBeHost ? 'host' : requestedRole === 'observer' ? 'observer' : 'player',
     };
     const updated = this.rooms.addParticipant(roomId, participant);
     this.logEvent({ event: 'room_join', room_id: roomId, name, socket_id: client.id });
@@ -232,8 +234,25 @@ export class RoomsGateway implements OnGatewayDisconnect {
       this.logEvent({ event: 'auth_forbidden', action: 'story:set', room_id: roomId, socket_id: client.id, role: me.role });
       return;
     }
-    const story = (payload?.story ?? '').trim();
-    room.story = story;
+    const sanitize = (s: Partial<Story> | undefined | null): Story | null => {
+      if (!s || typeof s !== 'object') return null;
+      const title = (s.title ?? '').toString().trim();
+      if (!title) return null;
+      const genId = () => `S-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      const idRaw = (s.id ?? '').toString().trim();
+      const id = idRaw || genId();
+      const notes = (s.notes ?? '').toString();
+      const story: Story = { id, title };
+      if (notes.trim()) story.notes = notes;
+      return story;
+    };
+    const next = sanitize((payload as any)?.story);
+    if (!next) {
+      const err: RoomErrorEvent = { code: 'invalid_payload', message: 'Story title is required' };
+      client.emit('room:error', err);
+      return;
+    }
+    room.story = next;
     this.logEvent({ event: 'story_set', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);

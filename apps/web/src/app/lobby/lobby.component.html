@@ -37,6 +37,10 @@
         aria-describedby="roomHelp"
       />
       <small id="roomHelp" class="muted">Join is enabled when code is present</small>
+      <label class="check">
+        <input type="checkbox" [(ngModel)]="joinAsObserver" name="joinAsObserver" />
+        Join as observer (cannot vote)
+      </label>
       <div class="actions">
         <button type="submit" [disabled]="!canJoin()">Join Room</button>
       </div>
