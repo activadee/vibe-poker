@@ -26,6 +26,7 @@ describe('RoomsGateway', () => {
             get: jest.fn(),
             addParticipant: jest.fn(),
             removeParticipant: jest.fn(),
+            remove: jest.fn(),
             castVote: jest.fn(),
             reset: jest.fn(),
             computeProgress: jest.fn(),
@@ -113,6 +114,7 @@ describe('RoomsGateway', () => {
 
     gateway.handleJoin({ roomId: 'OLD1', name: 'Zoe' }, client);
 
+    expect(rooms.remove).toHaveBeenCalledWith('OLD1');
     expect(client.emit).toHaveBeenCalledWith(
       'room:error',
       expect.objectContaining({ code: 'expired' })
