@@ -107,4 +107,14 @@ describe('LobbyComponent', () => {
     comp.joinRoom();
     expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ABCD-1234'], { queryParams: { role: 'player' } });
   });
+
+  it('shows an error alert when error() is set', () => {
+    const fixture = TestBed.createComponent(LobbyComponent);
+    const comp = fixture.componentInstance as any;
+    comp.error.set('Something went wrong');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const alert = el.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Something went wrong');
+  });
 });

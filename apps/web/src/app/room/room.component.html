@@ -157,12 +157,13 @@
       <app-ui-card class="block participants">
         <div class="flex items-center justify-between">
           <h3 class="text-base font-semibold text-slate-900">Participants</h3>
+          @if (voteTotal() > 0) {
           <div
-            *ngIf="voteTotal() > 0"
             class="progress-pill inline-flex items-center rounded-full px-3 py-1 text-xs bg-slate-100 text-slate-700"
           >
             {{ voteCount() }}/{{ voteTotal() }} voted
           </div>
+          }
         </div>
         @if (revealed() && stats()) {
         <div class="mt-2 results">
@@ -180,15 +181,14 @@
             <div class="flex items-center gap-2 min-w-0">
               <span class="truncate">{{ p.name }}</span>
               <span class="role text-slate-500 text-xs">{{ p.role }}</span>
-              <span class="badge voted" *ngIf="hasVoted(p)">Voted</span>
+              @if (hasVoted(p)) {<span class="badge voted">Voted</span>}
             </div>
             <div class="text-sm text-slate-700">
-              <span class="vote" *ngIf="revealed(); else hiddenVote">{{
-                votes()[p.id]
-              }}</span>
-              <ng-template #hiddenVote>
+              @if (revealed()) {
+                <span class="vote">{{ votes()[p.id] }}</span>
+              } @else {
                 <span class="vote text-slate-400">—</span>
-              </ng-template>
+              }
             </div>
           </li>
           }
@@ -217,16 +217,12 @@
         </div>
         <div class="mt-4 flex items-center gap-2">
           @if (!revealed()) {
-          <ng-container>
             <button appUiButton (click)="reveal()">Reveal</button>
             <button appUiButton variant="secondary" (click)="resetVotes()">
               Reset
             </button>
-          </ng-container>
           } @else {
-          <ng-container>
             <button appUiButton (click)="revote()">Revote</button>
-          </ng-container>
           }
         </div>
       </app-ui-card>
