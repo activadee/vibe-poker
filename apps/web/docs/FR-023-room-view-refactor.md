@@ -39,6 +39,15 @@ Goal: Align the Room UI with the design system primitives and the provided refer
 - Share/Actions
   - Shows truncated room URL with Copy Invite and Leave Room buttons.
 
+## Migration
+
+- Removed all legacy `.btn`/`.primary`/`.secondary` classes in Room view.
+- Use `appUiButton` with `variant` instead:
+  - Primary: `<button appUiButton>...</button>`
+  - Secondary: `<button appUiButton variant="secondary">...</button>`
+  - Ghost: `<button appUiButton variant="ghost">...</button>`
+- Fixed a stray boolean `secondary` attribute on the Copy Invite button to `variant="secondary"` so variants apply reliably.
+
 ## Behavior (unchanged)
 
 - Auto-join logic based on saved name and query params.

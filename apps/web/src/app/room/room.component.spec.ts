@@ -281,6 +281,9 @@ describe('RoomComponent (FR-014 Revote)', () => {
     expect(shareCard).toBeTruthy();
     const copyBtn = shareCard!.querySelector('button[appUiButton]') as HTMLButtonElement | null;
     expect(copyBtn?.textContent?.trim()).toBe('Copy Invite');
+    // Variant should be secondary (white background + border)
+    expect(copyBtn?.className).toContain('bg-white');
+    expect(copyBtn?.className).toContain('border-slate-200');
   });
 
   it('disables voting and ignores cast when role is observer (FR-013)', () => {
