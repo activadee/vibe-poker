@@ -35,17 +35,24 @@ describe('LobbyComponent', () => {
     expect(navigateSpy).toHaveBeenCalledWith(['/r', 'ABCD-1234']);
   });
 
-  it('renders initial state (snapshot)', () => {
+  it('renders headings and buttons with design classes', () => {
     const fixture = TestBed.createComponent(LobbyComponent);
     fixture.detectChanges();
-    expect(fixture.nativeElement).toMatchSnapshot();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('h1')?.textContent?.trim()).toBe('Planning Poker');
+    expect(el.querySelector('#create-title')?.textContent?.trim()).toBe('Create a Room');
+    expect(el.querySelector('#join-title')?.textContent?.trim()).toBe('Join a Room');
+    // Buttons should have our directive-applied classes
+    const buttons = Array.from(el.querySelectorAll('button')) as HTMLButtonElement[];
+    expect(buttons.length).toBeGreaterThanOrEqual(2);
+    expect(buttons[0].className).toContain('inline-flex');
   });
 
   it('enables Join when room code present', () => {
     const fixture = TestBed.createComponent(LobbyComponent);
     const comp = fixture.componentInstance;
     fixture.detectChanges();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('section:nth-of-type(2) button');
+    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('app-ui-card:nth-of-type(2) button');
     expect(btn.disabled).toBe(true);
     comp.roomCode = 'ABCD-1234';
     fixture.detectChanges();
@@ -55,7 +62,7 @@ describe('LobbyComponent', () => {
   it('validates name length for Create (3–30)', () => {
     const fixture = TestBed.createComponent(LobbyComponent);
     const comp = fixture.componentInstance;
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('section:first-of-type button');
+    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('app-ui-card:first-of-type button');
     comp.name = 'Al';
     fixture.detectChanges();
     expect(btn.disabled).toBe(true);
