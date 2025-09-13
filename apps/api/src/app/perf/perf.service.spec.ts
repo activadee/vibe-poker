@@ -1,12 +1,13 @@
 import { Test } from '@nestjs/testing';
 import { PerfService } from './perf.service';
+import { LoggingService } from '../logging/logging.service';
 
 describe('PerfService', () => {
   let perf: PerfService;
 
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
-      providers: [PerfService],
+      providers: [PerfService, LoggingService],
     }).compile();
     perf = moduleRef.get(PerfService);
   });
@@ -46,4 +47,3 @@ describe('PerfService', () => {
     expect((snap.timings['wrap.async']?.count ?? 0)).toBeGreaterThanOrEqual(1);
   });
 });
-

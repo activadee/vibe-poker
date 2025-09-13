@@ -4,6 +4,7 @@ import { RoomsGateway } from './rooms.gateway';
 import { RoomsService } from './rooms.service';
 import { PerfService } from '../perf/perf.service';
 import type { Room } from '@scrum-poker/shared-types';
+import { LoggingService } from '../logging/logging.service';
 
 describe('RoomsGateway', () => {
   let gateway: RoomsGateway;
@@ -28,6 +29,7 @@ describe('RoomsGateway', () => {
             inc: (_name: string, _delta?: number) => undefined,
           },
         },
+        { provide: LoggingService, useValue: { event: jest.fn() } },
         {
           provide: RoomsService,
           useValue: {

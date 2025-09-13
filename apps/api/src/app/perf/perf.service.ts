@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { redactSecrets } from '../security/redact';
+import { LoggingService } from '../logging/logging.service';
 
 type TimingMeta = Record<string, unknown> | undefined;
 
@@ -10,14 +11,16 @@ export class PerfService {
   private readonly timings = new Map<string, number[]>();
   private readonly maxSamples = 1000; // cap memory
 
+  constructor(private readonly logging: LoggingService) {}
+
   start(name: string) {
     const start = process.hrtime.bigint();
     return (meta?: TimingMeta) => {
       const end = process.hrtime.bigint();
       const ms = Number(end - start) / 1_000_000; // ns -> ms
       this.recordTiming(name, ms);
-      const payload = { event: 'timing', name, ms: Math.round(ms * 1000) / 1000, ...(meta || {}) };
-      this.logger.log(JSON.stringify(redactSecrets(payload)));
+      const payload = { name, ...(meta || {}) } as Record<string, unknown>;
+      this.logging.event('timing', payload, { latencyMs: Math.round(ms * 1000) / 1000 });
       return ms;
     };
   }

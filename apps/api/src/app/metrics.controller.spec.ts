@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { MetricsController } from './metrics.controller';
 import { PerfService } from './perf/perf.service';
+import { LoggingService } from './logging/logging.service';
 import { RoomsService } from './rooms/rooms.service';
 
 describe('MetricsController', () => {
@@ -16,7 +17,7 @@ describe('MetricsController', () => {
 
     const moduleRef = await Test.createTestingModule({
       controllers: [MetricsController],
-      providers: [PerfService, { provide: RoomsService, useValue: rooms }],
+      providers: [PerfService, LoggingService, { provide: RoomsService, useValue: rooms }],
     }).compile();
 
     controller = moduleRef.get(MetricsController);
@@ -45,4 +46,3 @@ describe('MetricsController', () => {
     expect(json.rooms.total_participants).toBe(3);
   });
 });
-

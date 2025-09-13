@@ -2,15 +2,12 @@ import { Test } from '@nestjs/testing';
 import { RoomsGateway } from './rooms.gateway';
 import { RoomsService } from './rooms.service';
 import { PerfService } from '../perf/perf.service';
+import { LoggingService } from '../logging/logging.service';
 
 describe('RoomsGateway CORS', () => {
   it('afterInit applies CORS allowlist from env', async () => {
     const moduleRef = await Test.createTestingModule({
-      providers: [
-        RoomsGateway,
-        RoomsService,
-        PerfService,
-      ],
+      providers: [RoomsGateway, RoomsService, PerfService, LoggingService],
     }).compile();
 
     const gateway = moduleRef.get(RoomsGateway);
