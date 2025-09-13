@@ -103,3 +103,11 @@ And join the Nx community:
 - [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
 - [Our Youtube channel](https://www.youtube.com/@nxdevtools)
 - [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+
+## Privacy
+
+- Minimal data: The server holds room state only in memory; no database is used.
+- Time‑to‑live: Each room expires 24h after creation and is purged by a background sweeper. Joining an expired room is rejected and the room is deleted.
+- Logs: Server logs are structured and redact sensitive fields.
+
+See API details in `apps/api/docs/NFR-004-privacy.md`.
