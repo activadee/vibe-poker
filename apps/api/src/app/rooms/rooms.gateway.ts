@@ -29,7 +29,7 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { sessionMiddleware } from '../session.middleware';
 import { PerfService } from '../perf/perf.service';
 import { applyCorsToSocket } from '../security/cors';
-import { redactSecrets } from '../security/redact';
+import { LoggingService } from '../logging/logging.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -82,10 +82,15 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
       .strict(),
   } as const;
 
-  constructor(private readonly rooms: RoomsService, private readonly perf: PerfService) {}
+  constructor(
+    private readonly rooms: RoomsService,
+    private readonly perf: PerfService,
+    private readonly logging: LoggingService
+  ) {}
 
-  private logEvent(event: Record<string, unknown>) {
-    this.logger.log(JSON.stringify(redactSecrets(event)));
+  private logEvent(event: Record<string, unknown>, client?: Socket, latencyMs?: number) {
+    const correlationId = this.correlationIdFor(client);
+    this.logging.event(String((event as { event?: unknown }).event ?? 'event'), { ...event }, { correlationId, latencyMs });
   }
 
   // Share HTTP session with Socket.IO by wrapping express-session middleware
@@ -117,9 +122,7 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     try {
       if (engine?.opts) {
         engine.opts.perMessageDeflate = false;
-        this.logger.log(
-          JSON.stringify({ event: 'socketio_permessage_deflate_disabled', value: false })
-        );
+        this.logging.event('socketio_permessage_deflate_disabled', { value: false });
       }
     } catch (err) {
       this.logger.warn(`Failed to disable perMessageDeflate: ${String(err)}`);
@@ -128,7 +131,7 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     // Apply CORS allowlist from env (if configured)
     try {
       applyCorsToSocket(server);
-      this.logger.log(JSON.stringify({ event: 'socketio_cors_applied' }));
+      this.logging.event('socketio_cors_applied');
     } catch (e) {
       this.logger.warn(`Failed to apply Socket.IO CORS: ${String(e)}`);
     }
@@ -182,6 +185,19 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
 
   private roomKey(roomId: string): string {
     return `room:${roomId}`;
+  }
+
+  private correlationIdFor(client?: Socket): string | undefined {
+    if (!client) return undefined;
+    const header = (client.handshake as Partial<{ headers?: Record<string, unknown> }> | undefined)?.headers?.[
+      'x-correlation-id'
+    ];
+    if (header && typeof header === 'string' && header.trim()) return header;
+    // Fall back to session uid when available
+    type ReqWithSession = Request & { session?: { uid?: string } };
+    const req = client.request as unknown as ReqWithSession;
+    if (req?.session?.uid) return req.session.uid;
+    return client.id;
   }
 
   private getContext(client: Socket): { roomId: string; room: Room; me: Participant } | undefined {
@@ -292,12 +308,12 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
       role: shouldBeHost ? 'host' : requestedRole === 'observer' ? 'observer' : 'player',
     };
     const updated = this.rooms.addParticipant(roomId, participant);
-    this.logEvent({ event: 'room_join', room_id: roomId, name, socket_id: client.id });
 
     // Broadcast state to all in room (including the joiner)
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(updated));
     this.broadcastProgress(roomId, updated);
-    stop({ roomId, participants: updated.participants.length });
+    const ms = stop({ roomId, participants: updated.participants.length });
+    this.logEvent({ event: 'room_join', room_id: roomId, name, socket_id: client.id }, client, ms);
   }
 
   handleDisconnect(client: Socket) {
@@ -308,10 +324,10 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     this.socketRoom.delete(client.id);
     const room = this.rooms.removeParticipant(roomId, client.id);
     if (!room) return;
-    this.logEvent({ event: 'room_leave', room_id: roomId, socket_id: client.id });
+    const ms = stop({ roomId, participants: room.participants.length });
+    this.logEvent({ event: 'room_leave', room_id: roomId, socket_id: client.id }, client, ms);
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
-    stop({ roomId, participants: room.participants.length });
   }
 
   @SubscribeMessage('vote:cast')
@@ -328,17 +344,17 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     if (!this.isPlayer(me)) {
       const err: RoomErrorEvent = { code: 'forbidden', message: 'Observers cannot vote' };
       client.emit('room:error', err);
-      this.logEvent({ event: 'auth_forbidden', action: 'vote:cast', room_id: roomId, socket_id: client.id, role: me.role });
+      this.logEvent({ event: 'auth_forbidden', action: 'vote:cast', room_id: roomId, socket_id: client.id, role: me.role }, client);
       return; // safely ignore
     }
     const value = (payload?.value ?? '').toString();
     if (!value) return; // ignore invalid
     // Persist via service (overwrites if re-cast)
     this.rooms.castVote(roomId, client.id, value);
-    this.logEvent({ event: 'vote_cast', room_id: roomId, socket_id: client.id });
     // Broadcast progress only (no values) to all clients
     this.broadcastProgress(roomId, room);
-    stop({ roomId });
+    const ms = stop({ roomId });
+    this.logEvent({ event: 'vote_cast', room_id: roomId, socket_id: client.id }, client, ms);
   }
 
   @SubscribeMessage('vote:reveal')
@@ -355,14 +371,14 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     if (!this.isHost(me)) {
       const err: RoomErrorEvent = { code: 'forbidden', message: 'Only host can reveal votes' };
       client.emit('room:error', err);
-      this.logEvent({ event: 'auth_forbidden', action: 'vote:reveal', room_id: roomId, socket_id: client.id, role: me.role });
+      this.logEvent({ event: 'auth_forbidden', action: 'vote:reveal', room_id: roomId, socket_id: client.id, role: me.role }, client);
       return;
     }
     room.revealed = true;
-    this.logEvent({ event: 'vote_reveal', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
-    stop({ roomId });
+    const ms = stop({ roomId });
+    this.logEvent({ event: 'vote_reveal', room_id: roomId, socket_id: client.id }, client, ms);
   }
 
   @SubscribeMessage('vote:reset')
@@ -379,14 +395,14 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     if (!this.isHost(me)) {
       const err: RoomErrorEvent = { code: 'forbidden', message: 'Only host can reset votes' };
       client.emit('room:error', err);
-      this.logEvent({ event: 'auth_forbidden', action: 'vote:reset', room_id: roomId, socket_id: client.id, role: me.role });
+      this.logEvent({ event: 'auth_forbidden', action: 'vote:reset', room_id: roomId, socket_id: client.id, role: me.role }, client);
       return;
     }
     this.rooms.reset(roomId);
-    this.logEvent({ event: 'vote_reset', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
-    stop({ roomId });
+    const ms = stop({ roomId });
+    this.logEvent({ event: 'vote_reset', room_id: roomId, socket_id: client.id }, client, ms);
   }
 
   @SubscribeMessage('story:set')
@@ -403,7 +419,7 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     if (!this.isHost(me)) {
       const err: RoomErrorEvent = { code: 'forbidden', message: 'Only host can set story' };
       client.emit('room:error', err);
-      this.logEvent({ event: 'auth_forbidden', action: 'story:set', room_id: roomId, socket_id: client.id, role: me.role });
+      this.logEvent({ event: 'auth_forbidden', action: 'story:set', room_id: roomId, socket_id: client.id, role: me.role }, client);
       return;
     }
     const sanitize = (s: Partial<Story> | undefined | null): Story | null => {
@@ -425,10 +441,10 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
       return;
     }
     room.story = next;
-    this.logEvent({ event: 'story_set', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
-    stop({ roomId });
+    const ms = stop({ roomId });
+    this.logEvent({ event: 'story_set', room_id: roomId, socket_id: client.id }, client, ms);
   }
 
   @SubscribeMessage('deck:set')
@@ -444,24 +460,24 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     if (!this.isHost(me)) {
       const err: RoomErrorEvent = { code: 'forbidden', message: 'Only host can change deck' };
       client.emit('room:error', err);
-      this.logEvent({ event: 'auth_forbidden', action: 'deck:set', room_id: roomId, socket_id: client.id, role: me.role });
+      this.logEvent({ event: 'auth_forbidden', action: 'deck:set', room_id: roomId, socket_id: client.id, role: me.role }, client);
       return;
     }
     const deckId = payload?.deckId ?? 'fibonacci';
     room.deckId = deckId;
     // Reset round state when deck changes (votes cleared, reveal off, stats removed)
     this.rooms.reset(roomId);
-    this.logEvent({ event: 'deck_set', room_id: roomId, socket_id: client.id, deck: deckId });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
-    stop({ roomId, deck: deckId });
+    const ms = stop({ roomId, deck: deckId });
+    this.logEvent({ event: 'deck_set', room_id: roomId, socket_id: client.id, deck: deckId }, client, ms);
   }
 
   // Track connected socket counts to gauge concurrency
   handleConnection(client: Socket) {
     this.perf.inc('sockets.connected', 1);
     // Also track via log
-    this.logEvent({ event: 'socket_connected', socket_id: client.id });
+    this.logEvent({ event: 'socket_connected', socket_id: client.id }, client);
     client.on('disconnect', () => this.perf.inc('sockets.connected', -1));
   }
 }

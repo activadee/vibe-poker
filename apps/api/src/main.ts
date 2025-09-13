@@ -6,6 +6,8 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
+import { LoggingService } from './app/logging/logging.service';
+import { correlationMiddlewareFactory } from './app/logging/correlation.middleware';
 import { applyCorsToNest } from './app/security/cors';
 import { sessionMiddleware } from './app/session.middleware';
 
@@ -15,6 +17,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // Attach HTTP session middleware for REST routes
   app.use(sessionMiddleware);
+  // Attach correlation-id middleware for structured logs
+  const logging = app.get(LoggingService);
+  app.use(correlationMiddlewareFactory(logging));
   // Apply CORS allowlist from env if configured
   applyCorsToNest(app);
   // Expose an unprefixed health endpoint at /healthz for k8s/load balancers
