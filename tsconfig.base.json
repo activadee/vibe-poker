@@ -15,6 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@scrum-poker/repo-oss": ["libs/oss/src/index.ts"],
       "@scrum-poker/shared-types": ["apps/shared-types/src/index.ts"]
     }
   },
