@@ -12,7 +12,7 @@ module.exports = {
     'text-2xl','text-base','text-sm','font-semibold','font-medium','tracking-tight',
     'text-slate-900','text-slate-700','text-slate-600','text-slate-500','text-red-600','text-white',
     // Surfaces
-    'bg-white','bg-slate-100','bg-transparent','bg-surface','bg-surface-faint','bg-primary-900','hover:bg-primary-800',
+    'bg-white','bg-slate-100','bg-transparent','bg-surface','bg-primary-900','hover:bg-primary-800',
     // Borders & radius & shadow
     'border','border-slate-200','rounded-md','rounded-xl','rounded-full','shadow-card','shadow-sm',
     // Buttons sizing
