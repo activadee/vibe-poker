@@ -37,7 +37,7 @@
     "@angular-devkit/schematics": "~20.1.0",
     "@angular/cli": "~20.1.0",
     "@angular/compiler-cli": "~20.1.0",
-    "@angular/language-service": "~20.1.0",
+    "@angular/language-service": "~20.3.0",
     "@eslint/js": "^9.8.0",
     "@jsverse/transloco": "^7.6.1",
     "@jsverse/transloco-keys-manager": "^7.0.2",
