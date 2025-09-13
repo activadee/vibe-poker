@@ -16,6 +16,14 @@ describe('CORS utilities', () => {
     expect(isOriginAllowed('https://b.com', list)).toBe(false);
   });
 
+  it('isOriginAllowed rejects subdomains or look-alike domains for bare hosts', () => {
+    const list = parseAllowlist('example.com');
+    expect(isOriginAllowed('https://example.com', list)).toBe(true);
+    expect(isOriginAllowed('https://example.com:3000', list)).toBe(true);
+    expect(isOriginAllowed('https://sub.example.com', list)).toBe(false);
+    expect(isOriginAllowed('https://evil-example.com', list)).toBe(false);
+  });
+
   it('origin function allows allowlisted and rejects others', (done) => {
     const fn = makeCorsOriginFn(['https://x.test']) as (o: string, cb: (e: Error | null, ok: boolean) => void) => void;
     fn('https://x.test', (err, ok) => {

@@ -18,6 +18,7 @@ export function isOriginAllowed(origin: string | undefined, allowlist: string[])
   try {
     const url = new URL(origin);
     const normalized = `${url.protocol}//${url.host}`; // scheme + host[:port]
+    const hostname = url.hostname.toLowerCase();
     return allowlist.some((item) => {
       try {
         const iurl = new URL(item);
@@ -26,7 +27,7 @@ export function isOriginAllowed(origin: string | undefined, allowlist: string[])
       } catch {
         // Allow bare hosts (e.g., example.com) as shorthand for https://example.com
         const bare = item.toLowerCase();
-        return normalized.toLowerCase().endsWith(`://${bare}`) || normalized.toLowerCase().includes(`${bare}:`);
+        return hostname === bare;
       }
     });
   } catch {
