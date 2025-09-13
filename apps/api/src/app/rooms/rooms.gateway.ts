@@ -128,7 +128,7 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
   private clientIp(client: Socket): string {
     // socket.io provides peer IP via handshake.address
     // Note: in proxied environments, this may be a private IP unless trust proxy is configured upstream.
-    const address = (client.handshake as Partial<{ address: string }>).address;
+    const address = (client.handshake as Partial<{ address?: string }> | undefined)?.address;
     return address || 'unknown';
   }
 
@@ -193,28 +193,36 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     return p?.role === 'player' || p?.role === 'host';
   }
 
-  // Lean payload for clients: omit heavy fields and exclude votes until reveal.
-  // This minimizes bandwidth with WS compression disabled.
-  private safeRoom(room: Room): Omit<Room, 'createdAt' | 'expiresAt'> {
-    const base: Omit<Room, 'createdAt' | 'expiresAt'> = {
-      id: room.id,
-      participants: (room.participants ?? []).map((p) => ({ id: p.id, name: p.name, role: p.role })),
-      deckId: room.deckId,
-      revealed: !!room.revealed,
-      story: room.story ? { id: room.story.id, title: room.story.title, ...(room.story.notes?.trim() ? { notes: room.story.notes } : {}) } : undefined,
-    };
-    if (room.revealed) {
-      // Compute/attach stats only when needed
-      const stats = this.rooms.computeStats(room);
-      if (stats) (base as Room).stats = stats;
-      if (room.votes) (base as Room).votes = room.votes;
+  // Safe room payload: exclude votes/stats before reveal; otherwise include them.
+  private safeRoom(room: Room): Room {
+    if (!room.revealed) {
+      const { votes: _omitVotes, stats: _omitStats, ...rest } = room;
+      // Also shallow-copy participants and optionally story to avoid leaking unexpected props
+      const shaped: Room = {
+        ...rest,
+        participants: (room.participants ?? []).map((p) => ({ id: p.id, name: p.name, role: p.role })),
+      } as Room;
+      if (room.story) {
+        const s = room.story;
+        shaped.story = { id: s.id, title: s.title, ...(s.notes?.trim() ? { notes: s.notes } : {}) };
+      }
+      // Do not force `revealed: false` to preserve previous payload shape
+      return shaped;
     }
-    return base;
+    // When revealed, compute and attach stats derived from numeric votes and include votes
+    const stats = this.rooms.computeStats(room);
+    if (stats) {
+      room.stats = stats;
+    } else {
+      delete room.stats;
+    }
+    return room;
   }
 
   private computeProgress(room: Room): VoteProgressEvent {
     // Delegate to service for consistency and testability
-    return this.rooms.computeProgress(room);
+    const p = this.rooms.computeProgress(room) as VoteProgressEvent | undefined;
+    return p ?? { count: 0, total: 0, votedIds: [] };
   }
 
   private broadcastProgress(roomId: string, room: Room) {
