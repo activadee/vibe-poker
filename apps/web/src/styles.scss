@@ -26,10 +26,10 @@ body {
 }
 
 body {
-  @apply bg-surface-faint text-slate-800 antialiased;
+  background-color: #f8fafc;
+  color: #1e293b;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Simple prose defaults for app content */
-.prose h1 { @apply text-3xl font-semibold tracking-tight text-slate-900; }
-.prose h2 { @apply text-lg font-semibold text-slate-900; }
-.prose p  { @apply text-sm text-slate-600; }
