@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { redactSecrets } from '../security/redact';
 import { Room } from '@scrum-poker/shared-types';
 import type { VoteProgressEvent, VoteStats } from '@scrum-poker/shared-types';
 
@@ -18,7 +19,7 @@ export class RoomsService {
   private readonly ttlMs = DAY_MS;
 
   private logEvent(event: Record<string, unknown>) {
-    this.logger.log(JSON.stringify(event));
+    this.logger.log(JSON.stringify(redactSecrets(event)));
   }
 
   create(hostName: string, ownerSid: string): Room {
