@@ -6,6 +6,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
+import { applyCorsToNest } from './app/security/cors';
 import { sessionMiddleware } from './app/session.middleware';
 
 type HealthzRes = { json: (body: { ok: boolean }) => void };
@@ -14,6 +15,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // Attach HTTP session middleware for REST routes
   app.use(sessionMiddleware);
+  // Apply CORS allowlist from env if configured
+  applyCorsToNest(app);
   // Expose an unprefixed health endpoint at /healthz for k8s/load balancers
   // This complements the Nest controller which serves /api/healthz
   app.getHttpAdapter().get('/healthz', (_req: unknown, res: HealthzRes) => {

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { redactSecrets } from '../security/redact';
 
 type TimingMeta = Record<string, unknown> | undefined;
 
@@ -15,9 +16,8 @@ export class PerfService {
       const end = process.hrtime.bigint();
       const ms = Number(end - start) / 1_000_000; // ns -> ms
       this.recordTiming(name, ms);
-      this.logger.log(
-        JSON.stringify({ event: 'timing', name, ms: Math.round(ms * 1000) / 1000, ...(meta || {}) })
-      );
+      const payload = { event: 'timing', name, ms: Math.round(ms * 1000) / 1000, ...(meta || {}) };
+      this.logger.log(JSON.stringify(redactSecrets(payload)));
       return ms;
     };
   }
@@ -96,4 +96,3 @@ export class PerfService {
     return { counters, timings };
   }
 }
-

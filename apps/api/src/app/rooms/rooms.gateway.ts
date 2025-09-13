@@ -28,6 +28,8 @@ import type { Request, Response } from 'express';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { sessionMiddleware } from '../session.middleware';
 import { PerfService } from '../perf/perf.service';
+import { applyCorsToSocket } from '../security/cors';
+import { redactSecrets } from '../security/redact';
 
 @Injectable()
 @WebSocketGateway({
@@ -83,7 +85,7 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
   constructor(private readonly rooms: RoomsService, private readonly perf: PerfService) {}
 
   private logEvent(event: Record<string, unknown>) {
-    this.logger.log(JSON.stringify(event));
+    this.logger.log(JSON.stringify(redactSecrets(event)));
   }
 
   // Share HTTP session with Socket.IO by wrapping express-session middleware
@@ -123,6 +125,13 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
       this.logger.warn(`Failed to disable perMessageDeflate: ${String(err)}`);
     }
     engine.use(this.wrapSession(sessionMiddleware));
+    // Apply CORS allowlist from env (if configured)
+    try {
+      applyCorsToSocket(server);
+      this.logger.log(JSON.stringify({ event: 'socketio_cors_applied' }));
+    } catch (e) {
+      this.logger.warn(`Failed to apply Socket.IO CORS: ${String(e)}`);
+    }
   }
 
   private clientIp(client: Socket): string {

@@ -14,15 +14,12 @@ export class RoomsController {
     if (!hostName) {
       throw new BadRequestException('hostName is required');
     }
-    // Ensure a stable per-session uid for ownership tying
-    const anyReq = req as unknown as { session?: { uid?: string } };
-    if (!anyReq.session) {
-      (anyReq as any).session = {};
+    type ReqWithSession = Request & { session?: { uid?: string } };
+    const r = req as ReqWithSession;
+    if (r.session && !r.session.uid) {
+      r.session.uid = crypto.randomUUID();
     }
-    if (!anyReq.session.uid) {
-      anyReq.session.uid = crypto.randomUUID();
-    }
-    const ownerSid = anyReq.session.uid;
+    const ownerSid = r.session?.uid ?? crypto.randomUUID();
     const room = this.rooms.create(hostName, ownerSid);
     return { id: room.id, expiresAt: room.expiresAt };
   }
