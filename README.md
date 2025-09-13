@@ -1,5 +1,8 @@
 # ScrumPoker
 
+[![CI](https://github.com/activadee/viber-poker/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/activadee/viber-poker/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 <a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
 
 ## Documentation
@@ -12,6 +15,37 @@ Comprehensive documentation for the workspace lives alongside the source code.
 - [Shared types](apps/shared-types/docs/architecture.md)
 
 ✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+
+## Getting Started
+
+You can get this project running locally in ≤ 10 minutes.
+
+Prerequisites:
+- Node.js 20.x and npm 10.x
+
+Install dependencies:
+```sh
+npm ci
+```
+
+Build everything (optional):
+```sh
+npx nx run-many -t build --all
+```
+
+Run the apps:
+```sh
+# API (NestJS)
+npx nx serve api
+
+# Web (Angular)
+npx nx serve web
+```
+
+Run quality checks:
+```sh
+npx nx run-many -t lint test build --all
+```
 
 [Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
 
@@ -88,6 +122,14 @@ npx nx g ci-workflow
 Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
 
 [Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+
+## Architecture
+
+See the [System architecture](docs/architecture.md) for a high-level diagram, and app-specific docs for details:
+
+- [API architecture](apps/api/docs/architecture.md)
+- [Web architecture](apps/web/docs/architecture.md)
+- [Shared types](apps/shared-types/docs/architecture.md)
 
 ## Useful links
 
