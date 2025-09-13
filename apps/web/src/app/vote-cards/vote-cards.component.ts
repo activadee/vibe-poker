@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './vote-cards.component.html',
-  styleUrls: ['./vote-cards.component.scss'],
+  styleUrls: ['./vote-cards.component.css'],
 })
 export class VoteCardsComponent {
   // Standard Fibonacci preset per FR-007

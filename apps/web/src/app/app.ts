@@ -6,7 +6,7 @@ import { LangSwitchComponent } from './i18n/lang-switch.component';
   imports: [RouterModule, LangSwitchComponent],
   selector: 'app-root',
   templateUrl: './app.html',
-  styleUrl: './app.scss',
+  styleUrl: './app.css',
 })
 export class App {
   protected title = 'web';

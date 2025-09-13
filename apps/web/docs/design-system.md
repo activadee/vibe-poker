@@ -15,7 +15,7 @@ Tailwind v4 is precompiled with the Tailwind CLI before Angular builds.
   - `shadow-card` for elevated cards.
   - `rounded-xl` (12px) for cards and controls.
 
-Configuration lives in `apps/web/tailwind.web.config.js`. Global Tailwind layers are declared in `apps/web/src/styles.scss`.
+Tailwind v4 is configured via PostCSS (`apps/web/.postcssrc.json`) and CSS source in `apps/web/src/styles.css` using `@import "tailwindcss";`, `@plugin "@tailwindcss/forms";` and `@theme` tokens.
 
 ## Reusable UI Primitives
 
@@ -44,7 +44,7 @@ Files touched:
 
 - `apps/web/src/app/lobby/lobby.component.html`
 - `apps/web/src/app/lobby/lobby.component.ts`
-- `apps/web/src/styles.scss`
+- `apps/web/src/styles.css`
 - `apps/web/tailwind.config.cjs`
 - `apps/web/src/app/ui/*` (primitives listed above)
 

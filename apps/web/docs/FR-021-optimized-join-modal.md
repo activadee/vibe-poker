@@ -21,7 +21,7 @@ Implementation
 Files
 - apps/web/src/app/room/room.component.ts
 - apps/web/src/app/room/room.component.html
-- apps/web/src/app/room/room.component.scss
+- apps/web/src/app/room/room.component.css
 
 Tests
 - Updated room tests to check for the presence of the join modal when deep‑linking without a saved name.

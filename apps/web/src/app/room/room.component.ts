@@ -48,7 +48,7 @@ import { I18nService } from '../i18n/i18n.service';
     TranslocoPipe,
   ],
   templateUrl: './room.component.html',
-  styleUrls: ['./room.component.scss'],
+  styleUrls: ['./room.component.css'],
 })
 export class RoomComponent implements OnDestroy {
   @ViewChild(VoteCardsComponent) private cards?: VoteCardsComponent;

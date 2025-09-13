@@ -16,7 +16,7 @@ Goal: Align the Room UI with the design system primitives and the provided refer
 - Updated
   - `apps/web/src/app/room/room.component.ts` (imports UI primitives)
   - `apps/web/src/app/room/room.component.html` (new layout + design system usage)
-  - `apps/web/src/app/room/room.component.scss` (trimmed; modal overlay + small badges)
+  - `apps/web/src/app/room/room.component.css` (trimmed; modal overlay + small badges)
   - `apps/web/src/app/room/room.component.spec.ts` (selectors updated to `appUiButton` and `.host-controls`)
 - Added
   - `apps/web/docs/FR-023-room-view-refactor.md` (this file)

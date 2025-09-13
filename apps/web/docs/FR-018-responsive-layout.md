@@ -6,7 +6,7 @@ Goal
 
 Changes
 - Tokens
-  - Added global CSS tokens in `apps/web/src/styles.scss`:
+  - Added global CSS tokens in `apps/web/src/styles.css`:
     - `--touch-target: 44px`, `--radius: 12px`
     - Spacing scale: `--space-1..8`
     - Grid: `--card-min` (min column size for vote grid)
@@ -18,8 +18,8 @@ Changes
   - Default button `md` size uses `h-11` (44px).
 
 Files
-- `apps/web/src/styles.scss`
-- `apps/web/src/app/vote-cards/vote-cards.component.scss`
+- `apps/web/src/styles.css`
+- `apps/web/src/app/vote-cards/vote-cards.component.css`
 - `apps/web/src/app/ui/button.directive.ts`
 - `apps/web/src/app/ui/input.directive.ts`
 

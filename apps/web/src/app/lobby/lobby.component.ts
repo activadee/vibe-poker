@@ -17,7 +17,7 @@ import { I18nService } from '../i18n/i18n.service';
   standalone: true,
   imports: [CommonModule, FormsModule, UiButtonDirective, UiInputDirective, UiCheckboxDirective, UiCardComponent, TranslocoPipe],
   templateUrl: './lobby.component.html',
-  styleUrls: ['./lobby.component.scss'],
+  styleUrls: ['./lobby.component.css'],
 })
 export class LobbyComponent {
   private readonly http = inject(HttpClient);
