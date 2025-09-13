@@ -5,6 +5,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
   OnGatewayDisconnect,
+  OnGatewayConnection,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Injectable, Logger } from '@nestjs/common';
@@ -26,6 +27,7 @@ import type { Story } from '@scrum-poker/shared-types';
 import type { Request, Response } from 'express';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { sessionMiddleware } from '../session.middleware';
+import { PerfService } from '../perf/perf.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -33,7 +35,7 @@ import { sessionMiddleware } from '../session.middleware';
   // Route socket.io under /api so dev proxy forwards ws
   path: '/api/socket.io',
 })
-export class RoomsGateway implements OnGatewayDisconnect {
+export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
   @WebSocketServer()
   server!: Server;
 
@@ -78,7 +80,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
       .strict(),
   } as const;
 
-  constructor(private readonly rooms: RoomsService) {}
+  constructor(private readonly rooms: RoomsService, private readonly perf: PerfService) {}
 
   private logEvent(event: Record<string, unknown>) {
     this.logger.log(JSON.stringify(event));
@@ -97,13 +99,37 @@ export class RoomsGateway implements OnGatewayDisconnect {
 
   afterInit(server: Server) {
     // engine.use applies middleware to the underlying HTTP upgrade requests
-    server.engine.use(this.wrapSession(sessionMiddleware));
+    // Also ensure per-message deflate (WS compression) is disabled to reduce CPU
+    // while we optimize payload sizes at the application layer.
+    type EngineLike = {
+      opts: { perMessageDeflate?: boolean | Record<string, unknown> };
+      use: (
+        mw: (
+          req: IncomingMessage,
+          res: ServerResponse,
+          next: (err?: unknown) => void
+        ) => void
+      ) => void;
+    };
+    const engine = (server.engine as unknown) as EngineLike;
+    try {
+      if (engine?.opts) {
+        engine.opts.perMessageDeflate = false;
+        this.logger.log(
+          JSON.stringify({ event: 'socketio_permessage_deflate_disabled', value: false })
+        );
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to disable perMessageDeflate: ${String(err)}`);
+    }
+    engine.use(this.wrapSession(sessionMiddleware));
   }
 
   private clientIp(client: Socket): string {
     // socket.io provides peer IP via handshake.address
     // Note: in proxied environments, this may be a private IP unless trust proxy is configured upstream.
-    return (client.handshake as any)?.address || 'unknown';
+    const address = (client.handshake as Partial<{ address?: string }> | undefined)?.address;
+    return address || 'unknown';
   }
 
   private tooLarge(payload: unknown): boolean {
@@ -167,13 +193,23 @@ export class RoomsGateway implements OnGatewayDisconnect {
     return p?.role === 'player' || p?.role === 'host';
   }
 
+  // Safe room payload: exclude votes/stats before reveal; otherwise include them.
   private safeRoom(room: Room): Room {
-    // Hide votes before reveal to avoid leaking values
     if (!room.revealed) {
-      const { votes: _omitted, stats: _stats_omitted, ...rest } = room;
-      return rest;
+      const { votes: _omitVotes, stats: _omitStats, ...rest } = room;
+      // Also shallow-copy participants and optionally story to avoid leaking unexpected props
+      const shaped: Room = {
+        ...rest,
+        participants: (room.participants ?? []).map((p) => ({ id: p.id, name: p.name, role: p.role })),
+      } as Room;
+      if (room.story) {
+        const s = room.story;
+        shaped.story = { id: s.id, title: s.title, ...(s.notes?.trim() ? { notes: s.notes } : {}) };
+      }
+      // Do not force `revealed: false` to preserve previous payload shape
+      return shaped;
     }
-    // When revealed, compute and attach stats derived from numeric votes
+    // When revealed, compute and attach stats derived from numeric votes and include votes
     const stats = this.rooms.computeStats(room);
     if (stats) {
       room.stats = stats;
@@ -185,12 +221,15 @@ export class RoomsGateway implements OnGatewayDisconnect {
 
   private computeProgress(room: Room): VoteProgressEvent {
     // Delegate to service for consistency and testability
-    return this.rooms.computeProgress(room);
+    const p = this.rooms.computeProgress(room) as VoteProgressEvent | undefined;
+    return p ?? { count: 0, total: 0, votedIds: [] };
   }
 
   private broadcastProgress(roomId: string, room: Room) {
+    const stop = this.perf.start('ws_emit.vote_progress');
     const progress = this.computeProgress(room);
     this.server.to(this.roomKey(roomId)).emit('vote:progress', progress);
+    stop({ roomId, count: progress.count, total: progress.total });
   }
 
   @SubscribeMessage('room:join')
@@ -198,6 +237,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() payload: RoomJoinPayload,
     @ConnectedSocket() client: Socket
   ) {
+    const stop = this.perf.start('ws_handler.room_join');
     if (!this.enforceLimits('room:join', client)) return;
     if (!this.validate(this.schemas.join, payload, client)) return;
     const roomId = payload.roomId.trim();
@@ -248,9 +288,11 @@ export class RoomsGateway implements OnGatewayDisconnect {
     // Broadcast state to all in room (including the joiner)
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(updated));
     this.broadcastProgress(roomId, updated);
+    stop({ roomId, participants: updated.participants.length });
   }
 
   handleDisconnect(client: Socket) {
+    const stop = this.perf.start('ws_handler.disconnect');
     const ctx = this.getContext(client);
     const roomId = ctx?.roomId ?? this.socketRoom.get(client.id);
     if (!roomId) return;
@@ -260,6 +302,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     this.logEvent({ event: 'room_leave', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
+    stop({ roomId, participants: room.participants.length });
   }
 
   @SubscribeMessage('vote:cast')
@@ -267,6 +310,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() payload: VoteCastPayload,
     @ConnectedSocket() client: Socket
   ) {
+    const stop = this.perf.start('ws_handler.vote_cast');
     if (!this.enforceLimits('vote:cast', client)) return;
     if (!this.validate(this.schemas.voteCast, payload, client)) return;
     const ctx = this.getContext(client);
@@ -285,6 +329,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     this.logEvent({ event: 'vote_cast', room_id: roomId, socket_id: client.id });
     // Broadcast progress only (no values) to all clients
     this.broadcastProgress(roomId, room);
+    stop({ roomId });
   }
 
   @SubscribeMessage('vote:reveal')
@@ -292,6 +337,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() _payload: VoteRevealPayload,
     @ConnectedSocket() client: Socket
   ) {
+    const stop = this.perf.start('ws_handler.vote_reveal');
     if (!this.enforceLimits('vote:reveal', client)) return;
     if (!this.validate(this.schemas.voteReveal, _payload ?? {}, client)) return;
     const ctx = this.getContext(client);
@@ -307,6 +353,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     this.logEvent({ event: 'vote_reveal', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
+    stop({ roomId });
   }
 
   @SubscribeMessage('vote:reset')
@@ -314,6 +361,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() _payload: VoteResetPayload,
     @ConnectedSocket() client: Socket
   ) {
+    const stop = this.perf.start('ws_handler.vote_reset');
     if (!this.enforceLimits('vote:reset', client)) return;
     if (!this.validate(this.schemas.voteReset, _payload ?? {}, client)) return;
     const ctx = this.getContext(client);
@@ -329,6 +377,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     this.logEvent({ event: 'vote_reset', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
+    stop({ roomId });
   }
 
   @SubscribeMessage('story:set')
@@ -336,6 +385,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() payload: StorySetPayload,
     @ConnectedSocket() client: Socket
   ) {
+    const stop = this.perf.start('ws_handler.story_set');
     // Story and deck updates are host-only but can be spammed; optional rate limits can be added later
     if (!this.validate(this.schemas.storySet, payload, client)) return;
     const ctx = this.getContext(client);
@@ -359,7 +409,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
       if (notes.trim()) story.notes = notes;
       return story;
     };
-    const next = sanitize((payload as any)?.story);
+    const next = sanitize((payload as unknown as { story?: Partial<Story> | null })?.story);
     if (!next) {
       const err: RoomErrorEvent = { code: 'invalid_payload', message: 'Story title is required' };
       client.emit('room:error', err);
@@ -369,6 +419,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     this.logEvent({ event: 'story_set', room_id: roomId, socket_id: client.id });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
+    stop({ roomId });
   }
 
   @SubscribeMessage('deck:set')
@@ -376,6 +427,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
     @MessageBody() payload: DeckSetPayload,
     @ConnectedSocket() client: Socket
   ) {
+    const stop = this.perf.start('ws_handler.deck_set');
     if (!this.validate(this.schemas.deckSet, payload, client)) return;
     const ctx = this.getContext(client);
     if (!ctx) return;
@@ -393,6 +445,15 @@ export class RoomsGateway implements OnGatewayDisconnect {
     this.logEvent({ event: 'deck_set', room_id: roomId, socket_id: client.id, deck: deckId });
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
     this.broadcastProgress(roomId, room);
+    stop({ roomId, deck: deckId });
+  }
+
+  // Track connected socket counts to gauge concurrency
+  handleConnection(client: Socket) {
+    this.perf.inc('sockets.connected', 1);
+    // Also track via log
+    this.logEvent({ event: 'socket_connected', socket_id: client.id });
+    client.on('disconnect', () => this.perf.inc('sockets.connected', -1));
   }
 }
 

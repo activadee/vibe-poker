@@ -2,6 +2,7 @@
 import { Test } from '@nestjs/testing';
 import { RoomsGateway } from './rooms.gateway';
 import { RoomsService } from './rooms.service';
+import { PerfService } from '../perf/perf.service';
 import type { Room } from '@scrum-poker/shared-types';
 
 describe('RoomsGateway', () => {
@@ -20,6 +21,13 @@ describe('RoomsGateway', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         RoomsGateway,
+        {
+          provide: PerfService,
+          useValue: {
+            start: () => () => 0,
+            inc: (_name: string, _delta?: number) => undefined,
+          },
+        },
         {
           provide: RoomsService,
           useValue: {
