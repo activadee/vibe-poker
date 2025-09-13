@@ -1,9 +1,8 @@
-<div class="deck" role="list">
+<div class="deck">
   @for (item of items(); track item.value; let i = $index) {
     <button
       type="button"
       class="card"
-      role="listitem"
       [disabled]="disabled()"
       [attr.title]="disabled() ? 'Observers cannot vote' : null"
       [attr.aria-disabled]="disabled() ? 'true' : 'false'"

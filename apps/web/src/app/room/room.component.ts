@@ -28,6 +28,7 @@ import { UiButtonDirective } from '../ui/button.directive';
 import { UiInputDirective } from '../ui/input.directive';
 import { UiCheckboxDirective } from '../ui/checkbox.directive';
 import { UiCardComponent } from '../ui/card/card.component';
+import { UiFocusTrapDirective } from '../ui/focus-trap.directive';
 
 @Component({
   selector: 'app-room',
@@ -41,6 +42,7 @@ import { UiCardComponent } from '../ui/card/card.component';
     UiInputDirective,
     UiCheckboxDirective,
     UiCardComponent,
+    UiFocusTrapDirective,
   ],
   templateUrl: './room.component.html',
   styleUrls: ['./room.component.scss'],
