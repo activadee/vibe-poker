@@ -1,8 +1,8 @@
 # Web Design System (Tailwind)
 
-This app uses Tailwind CSS (v3) with a small set of primitives to implement a consistent visual language. The implementation is based on the provided landing page reference.
+This app uses Tailwind CSS (v4) with a small set of primitives to implement a consistent visual language. The implementation is based on the provided landing page reference.
 
-Note: Tailwind is pinned to v3.4.x to align with Angular's current build pipeline in this repo. If you want v4, switch the builder or precompile CSS with the Tailwind CLI and remove the `@tailwind` directives from `styles.scss`.
+Tailwind v4 is precompiled with the Tailwind CLI before Angular builds.
 
 ## Theme
 
@@ -15,7 +15,7 @@ Note: Tailwind is pinned to v3.4.x to align with Angular's current build pipelin
   - `shadow-card` for elevated cards.
   - `rounded-xl` (12px) for cards and controls.
 
-Configuration lives in `apps/web/tailwind.config.js`. Global Tailwind layers are declared in `apps/web/src/styles.scss`.
+Configuration lives in `apps/web/tailwind.web.config.js`. Global Tailwind layers are declared in `apps/web/src/styles.scss`.
 
 ## Reusable UI Primitives
 

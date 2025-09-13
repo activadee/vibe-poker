@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Test } from '@nestjs/testing';
 import { RoomsController } from './rooms.controller';
 import { RoomsService } from './rooms.service';
@@ -40,4 +39,3 @@ describe('RoomsController logging', () => {
     expect(call[2].latencyMs).toBeGreaterThanOrEqual(0);
   });
 });
-

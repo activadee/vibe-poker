@@ -9,6 +9,7 @@
     "build": {
       "executor": "@angular-devkit/build-angular:browser",
       "outputs": ["{options.outputPath}"],
+      "dependsOn": ["build-css"],
       "options": {
         "outputPath": "dist/web",
         "index": "apps/web/src/index.html",
@@ -22,7 +23,7 @@
             "input": "apps/web/public"
           }
         ],
-        "styles": ["apps/web/src/styles.scss"]
+        "styles": ["apps/web/src/styles.css"]
       },
       "configurations": {
         "production": {
@@ -96,7 +97,14 @@
     "i18n-extract": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "transloco-keys-manager extract -i apps/web/src -o apps/web/public/i18n -l en"
+        "command": "transloco-keys-manager extract -i apps/web/src -o apps/web/public/i18n -l en && node tools/i18n/check-locale.mjs apps/web/public/i18n/en.json"
+      }
+    },
+    "build-css": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/src/styles.css"],
+      "options": {
+        "command": "npx tailwindcss -i apps/web/src/styles.scss -o apps/web/src/styles.css -c apps/web/tailwind.web.config.js --minify"
       }
     }
   }

@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { redactSecrets } from '../security/redact';
 import { LoggingService } from '../logging/logging.service';
 
 type TimingMeta = Record<string, unknown> | undefined;

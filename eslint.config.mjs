@@ -49,5 +49,18 @@ export default [
         ],
         // Override or add rules here
         rules: {}
+    },
+    {
+        files: [
+            "**/*.spec.ts",
+            "**/*.spec.tsx",
+            "**/*.spec.js",
+            "**/*.spec.jsx"
+        ],
+        rules: {
+            "@typescript-eslint/no-explicit-any": "off",
+            "@typescript-eslint/no-non-null-assertion": "off",
+            "@typescript-eslint/no-unused-vars": "off"
+        }
     }
 ];
