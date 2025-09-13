@@ -16,17 +16,17 @@
 }
 
 .card:hover:not(:disabled) {
-  border-color: #888;
+  border-color: #475569; /* slate-600 for better contrast of outline */
 }
 
 .card:focus-visible {
-  outline: 3px solid #1976d2;
+  outline: 3px solid #2f507d; /* primary-600 */
   outline-offset: 2px;
 }
 
 .card.selected {
-  border-color: #1976d2;
-  background: #e3f2fd;
+  border-color: #2f507d; /* primary-600 */
+  background: #eef2f9;  /* primary-50 */
 }
 
 .card:disabled {
