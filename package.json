@@ -6,7 +6,7 @@
     "dev": "npx nx run-many -t serve --projects=api,web",
     "build": "npx nx run-many -t build --projects=api,web",
     "lint": "npx nx run-many -t lint --all",
-    "test": "npx nx run-many -t test --all"
+    "test": "npx nx run-many -t test --all --silent"
   },
   "private": true,
   "dependencies": {
