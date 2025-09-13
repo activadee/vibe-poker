@@ -19,7 +19,7 @@
         variant="secondary"
         (click)="showReconnectBanner.set(false)"
       >
-        Dismiss
+        {{ 'common.dismiss' | transloco }}
       </button>
     </div>
   </div>
@@ -31,7 +31,7 @@
   >
     <div class="flex items-start justify-between gap-4">
       <p class="text-sm">{{ error() }}</p>
-      <a routerLink="/" appUiButton variant="secondary">Create a new room</a>
+      <a routerLink="/" appUiButton variant="secondary">{{ 'room.error.createNew' | transloco }}</a>
     </div>
   </div>
   } @if (showJoinModal()) {
@@ -45,19 +45,17 @@
   >
     <div class="modal">
       <app-ui-card class="block">
-        <h3 id="joinDialogTitle" class="text-base font-semibold text-slate-900">Join Room</h3>
-        <p id="joinDialogDesc" class="mt-1 text-xs text-slate-600">Your display name will be visible to others. Observers cannot vote.</p>
+        <h3 id="joinDialogTitle" class="text-base font-semibold text-slate-900">{{ 'room.join.title' | transloco }}</h3>
+        <p id="joinDialogDesc" class="mt-1 text-xs text-slate-600">{{ 'room.join.subtitle' | transloco }}</p>
         <div class="mt-3">
-          <label for="joinName" class="block text-sm font-medium text-slate-700"
-            >Your name</label
-          >
+          <label for="joinName" class="block text-sm font-medium text-slate-700">{{ 'room.join.nameLabel' | transloco }}</label>
           <input
             id="joinName"
             #joinNameInput
             appUiInput
             [(ngModel)]="name"
             (keyup.enter)="join()"
-            placeholder="Alice"
+            [placeholder]="('room.join.namePlaceholder' | transloco)"
           />
         </div>
         <div class="mt-3 flex items-center gap-2 text-sm text-slate-700">
@@ -67,13 +65,11 @@
             type="checkbox"
             [(ngModel)]="joinAsObserver"
           />
-          <label for="joinObserver" class="cursor-pointer select-none"
-            >Join as observer (cannot vote)</label
-          >
+          <label for="joinObserver" class="cursor-pointer select-none">{{ 'room.join.observer' | transloco }}</label>
         </div>
         <div class="mt-4 flex items-center justify-end gap-2">
-          <a routerLink="/" appUiButton variant="secondary">Cancel</a>
-          <button appUiButton (click)="join()">Join Room</button>
+          <a routerLink="/" appUiButton variant="secondary">{{ 'common.cancel' | transloco }}</a>
+          <button appUiButton (click)="join()">{{ 'room.join.submit' | transloco }}</button>
         </div>
       </app-ui-card>
     </div>
@@ -84,7 +80,7 @@
       <!-- Story -->
       <app-ui-card class="block">
         <div class="flex items-center justify-between">
-          <h3 class="text-base font-semibold text-slate-900">Current Story</h3>
+          <h3 class="text-base font-semibold text-slate-900">{{ 'room.story.current' | transloco }}</h3>
         </div>
         @if (myRole() === 'host') {
         <div class="mt-3 grid grid-cols-1 gap-3">
@@ -92,27 +88,27 @@
             <label
               for="storyTitle"
               class="block text-sm font-medium text-slate-700"
-              >Title</label
+              >{{ 'room.story.titleLabel' | transloco }}</label
             >
             <input
               id="storyTitle"
               appUiInput
               [(ngModel)]="storyTitleModel"
-              placeholder="Enter story title"
+              [placeholder]="('room.story.titlePlaceholder' | transloco)"
             />
           </div>
           <div>
             <label
               for="storyNotes"
               class="block text-sm font-medium text-slate-700"
-              >Notes</label
+              >{{ 'room.story.notesLabel' | transloco }}</label
             >
             <textarea
               id="storyNotes"
               appUiInput
               [(ngModel)]="storyNotesModel"
               rows="3"
-              placeholder="Optional notes"
+              [placeholder]="('room.story.notesPlaceholder' | transloco)"
             ></textarea>
           </div>
           <div class="flex justify-end">
@@ -122,7 +118,7 @@
               [disabled]="!storyTitleModel.trim()"
               (click)="saveStory()"
             >
-              Save
+              {{ 'common.save' | transloco }}
             </button>
           </div>
         </div>
@@ -143,7 +139,7 @@
       <!-- Voting -->
       <app-ui-card class="block">
         <div class="flex items-center justify-between">
-          <h3 class="text-base font-semibold text-slate-900">Vote</h3>
+          <h3 class="text-base font-semibold text-slate-900">{{ 'room.vote.title' | transloco }}</h3>
         </div>
         <app-vote-cards
           [values]="deckValues()"
@@ -158,21 +154,21 @@
       <app-ui-card class="block">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="text-sm text-slate-600">Share this room:</p>
+            <p class="text-sm text-slate-600">{{ 'room.share.label' | transloco }}</p>
             <code class="block mt-1 text-xs text-slate-700 truncate">{{
               url
             }}</code>
           </div>
         </div>
         @if(copied()) {
-        <p class="mt-2 text-xs text-green-700" role="status" aria-live="polite">Link copied!</p>
+        <p class="mt-2 text-xs text-green-700" role="status" aria-live="polite">{{ 'room.share.copied' | transloco }}</p>
         }
         <div class="mt-4 flex justify-end gap-2">
           <button appUiButton size="sm" variant="secondary" (click)="copyLink()">
-            Copy Invite
+            {{ 'room.share.copy' | transloco }}
           </button>
           <button appUiButton variant="secondary" size="sm" (click)="leave()">
-            Leave Room
+            {{ 'room.leave' | transloco }}
           </button>
         </div>
       </app-ui-card>
@@ -180,23 +176,20 @@
       <!-- Participants -->
       <app-ui-card class="block participants">
         <div class="flex items-center justify-between">
-          <h3 class="text-base font-semibold text-slate-900">Participants</h3>
+          <h3 class="text-base font-semibold text-slate-900">{{ 'room.participants.title' | transloco }}</h3>
           @if (voteTotal() > 0) {
           <div
             class="progress-pill inline-flex items-center rounded-full px-3 py-1 text-xs bg-slate-100 text-slate-700"
             role="status" aria-live="polite"
           >
-            {{ voteCount() }}/{{ voteTotal() }} voted
+            {{ 'room.participants.voted' | transloco: { count: voteCount(), total: voteTotal() } }}
           </div>
           }
         </div>
         @if (revealed() && stats()) {
         <div class="mt-2 results">
-          <div
-            class="stats-pill inline-flex items-center rounded-full px-3 py-1 text-xs bg-violet-100 text-violet-800 font-semibold"
-          >
-            Avg {{ stats()!.avg.toFixed(1) }} • Median
-            {{ stats()!.median.toFixed(1) }}
+          <div class="stats-pill inline-flex items-center rounded-full px-3 py-1 text-xs bg-violet-100 text-violet-800 font-semibold">
+            {{ 'room.stats.avgMedian' | transloco: { avg: stats()!.avg.toFixed(1), median: stats()!.median.toFixed(1) } }}
           </div>
         </div>
         }
@@ -223,12 +216,12 @@
       <!-- Host controls -->
       @if (myRole() === 'host') {
       <app-ui-card class="block host-controls">
-        <h3 class="text-base font-semibold text-slate-900">Host Controls</h3>
+        <h3 class="text-base font-semibold text-slate-900">{{ 'room.host.title' | transloco }}</h3>
         <div class="mt-3 deck-select">
           <label
             for="deckSelect"
             class="block text-sm font-medium text-slate-700"
-            >Deck Preset</label
+            >{{ 'room.host.deckPreset' | transloco }}</label
           >
           <select
             id="deckSelect"
@@ -236,18 +229,18 @@
             [ngModel]="deckId()"
             (ngModelChange)="changeDeck($event)"
           >
-            <option value="fibonacci">Fibonacci</option>
-            <option value="tshirt">T‑Shirt sizes</option>
+            <option value="fibonacci">{{ 'room.host.deck.fibonacci' | transloco }}</option>
+            <option value="tshirt">{{ 'room.host.deck.tshirt' | transloco }}</option>
           </select>
         </div>
         <div class="mt-4 flex items-center gap-2">
           @if (!revealed()) {
-            <button appUiButton (click)="reveal()">Reveal</button>
+            <button appUiButton (click)="reveal()">{{ 'room.host.reveal' | transloco }}</button>
             <button appUiButton variant="secondary" (click)="resetVotes()">
-              Reset
+              {{ 'room.host.reset' | transloco }}
             </button>
           } @else {
-            <button appUiButton (click)="revote()">Revote</button>
+            <button appUiButton (click)="revote()">{{ 'room.host.revote' | transloco }}</button>
           }
         </div>
       </app-ui-card>

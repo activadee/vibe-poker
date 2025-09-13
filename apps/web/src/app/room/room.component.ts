@@ -29,6 +29,8 @@ import { UiInputDirective } from '../ui/input.directive';
 import { UiCheckboxDirective } from '../ui/checkbox.directive';
 import { UiCardComponent } from '../ui/card/card.component';
 import { UiFocusTrapDirective } from '../ui/focus-trap.directive';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { I18nService } from '../i18n/i18n.service';
 
 @Component({
   selector: 'app-room',
@@ -43,6 +45,7 @@ import { UiFocusTrapDirective } from '../ui/focus-trap.directive';
     UiCheckboxDirective,
     UiCardComponent,
     UiFocusTrapDirective,
+    TranslocoPipe,
   ],
   templateUrl: './room.component.html',
   styleUrls: ['./room.component.scss'],
@@ -83,6 +86,7 @@ export class RoomComponent implements OnDestroy {
 
   private socket?: Socket;
   private socketId = signal<string>('');
+  private readonly i18n = inject(I18nService);
 
   // NFR-001: reconnect notice
   showReconnectBanner = signal(false);
@@ -161,7 +165,7 @@ export class RoomComponent implements OnDestroy {
       // If we previously lost the connection, surface a brief reconnected banner
       if (this.wasDisconnected) {
         this.reconnectVariant.set('success');
-        this.reconnectMessage.set('Reconnected to server. Rooms are ephemeral and may reset.');
+        this.reconnectMessage.set(this.i18n.t('room.reconnect.success'));
         this.showReconnectBanner.set(true);
         // Auto-rejoin room with prior identity
         const nm = (this.name || localStorage.getItem('displayName') || '').trim();
@@ -182,7 +186,7 @@ export class RoomComponent implements OnDestroy {
         const message =
           err && 'message' in err && typeof err.message === 'string'
             ? err.message
-            : 'Something went wrong joining the room';
+            : this.i18n.t('room.errors.join');
         this.error.set(message);
       }
     );
@@ -218,7 +222,7 @@ export class RoomComponent implements OnDestroy {
     socket.on('disconnect', () => {
       this.wasDisconnected = true;
       this.reconnectVariant.set('info');
-      this.reconnectMessage.set('Connection lost. Attempting to reconnect…');
+      this.reconnectMessage.set(this.i18n.t('room.reconnect.info'));
       this.showReconnectBanner.set(true);
     });
   }
@@ -226,7 +230,7 @@ export class RoomComponent implements OnDestroy {
   join() {
     const name = (this.name || '').trim();
     if (!name) {
-      this.error.set('Please enter your display name');
+      this.error.set(this.i18n.t('room.errors.missingName'));
       return;
     }
     this.error.set('');
@@ -254,14 +258,14 @@ export class RoomComponent implements OnDestroy {
 
   async copyLink() {
     const invite = [
-      'Join this room:',
-      `Join as observer: ${this.shareUrlObserver()}`,
-      `Join as user: ${this.shareUrlPlayer()}`,
+      this.i18n.t('room.share.invite'),
+      `${this.i18n.t('room.share.observer')}: ${this.shareUrlObserver()}`,
+      `${this.i18n.t('room.share.player')}: ${this.shareUrlPlayer()}`,
     ].join('\n');
     try {
       const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
       if (typeof nav.share === 'function') {
-        await nav.share({ title: 'Planning Poker', text: invite });
+        await nav.share({ title: this.i18n.t('common.appName'), text: invite });
       } else if (navigator.clipboard && 'writeText' in navigator.clipboard) {
         await navigator.clipboard.writeText(invite);
       } else {
@@ -295,7 +299,7 @@ export class RoomComponent implements OnDestroy {
 
   resetVotes() {
     // Host-only action in UI; ask for confirmation
-    const ok = window.confirm('Reset votes for this round?');
+    const ok = window.confirm(this.i18n.t('room.reset.confirm'));
     if (!ok) return;
     const socket = this.connect();
     socket.emit('vote:reset', {});

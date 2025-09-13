@@ -2,13 +2,25 @@ import 'jest-axe/extend-expect';
 import { axe } from 'jest-axe';
 import { TestBed } from '@angular/core/testing';
 import { LobbyComponent } from '../lobby/lobby.component';
+import { TranslocoTestingModule } from '@jsverse/transloco';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
 
 describe('A11y (axe) - core screens', () => {
   it('Lobby has no critical violations', async () => {
-    const fixture = TestBed.configureTestingModule({ imports: [LobbyComponent, HttpClientTestingModule, RouterTestingModule] }).createComponent(LobbyComponent);
+    const fixture = TestBed.configureTestingModule({
+      imports: [
+        TranslocoTestingModule.forRoot({
+          langs: { en: { lobby: { title: 'Planning Poker' } } },
+          translocoConfig: { availableLangs: ['en'], defaultLang: 'en' },
+          preloadLangs: true,
+        }),
+        LobbyComponent,
+        HttpClientTestingModule,
+        RouterTestingModule,
+      ],
+    }).createComponent(LobbyComponent);
     fixture.detectChanges();
     const results = await axe(fixture.nativeElement, {
       rules: {
