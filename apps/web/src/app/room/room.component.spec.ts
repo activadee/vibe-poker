@@ -283,6 +283,44 @@ describe('RoomComponent (FR-014 Revote)', () => {
     expect(copyBtn?.className).toContain('border-slate-200');
   });
 
+  it('shows reconnect banner on disconnect and switches to reconnected on connect', () => {
+    jest.useFakeTimers();
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+
+    // Attach fake socket and register handlers
+    const handlers: Record<string, (arg?: unknown) => void> = {};
+    const fakeSocket = {
+      on: (evt: string, cb: (arg?: unknown) => void) => {
+        handlers[evt] = cb;
+      },
+      emit: jest.fn(),
+      removeAllListeners: jest.fn(),
+      disconnect: jest.fn(),
+      id: 'p1',
+    } as any;
+    comp.setupSocketListeners(fakeSocket);
+
+    // Simulate disconnect
+    handlers['disconnect']?.();
+    fixture.detectChanges();
+    let html = fixture.nativeElement as HTMLElement;
+    expect(comp.showReconnectBanner()).toBe(true);
+    expect(html.textContent).toContain('Connection lost. Attempting to reconnect');
+
+    // Now reconnect; banner should flip to success and auto-hide
+    handlers['connect']?.();
+    fixture.detectChanges();
+    html = fixture.nativeElement as HTMLElement;
+    expect(html.textContent).toContain('Reconnected to server');
+
+    // After timer elapses, banner should hide
+    jest.runOnlyPendingTimers();
+    fixture.detectChanges();
+    expect(comp.showReconnectBanner()).toBe(false);
+    jest.useRealTimers();
+  });
+
   it('shows vote progress pill when at least one vote is cast', () => {
     component.joined.set(true);
     component.voteCount.set(1);

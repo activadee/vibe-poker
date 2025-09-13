@@ -82,6 +82,12 @@ export class RoomComponent implements OnDestroy {
   private socket?: Socket;
   private socketId = signal<string>('');
 
+  // NFR-001: reconnect notice
+  showReconnectBanner = signal(false);
+  reconnectMessage = signal('');
+  reconnectVariant = signal<'info' | 'success'>('info');
+  private wasDisconnected = false;
+
   myRole = computed(() => {
     const id = this.socketId();
     const me = this.participants().find((p) => p.id === id);
@@ -150,6 +156,15 @@ export class RoomComponent implements OnDestroy {
   private setupSocketListeners(socket: Socket) {
     socket.on('connect', () => {
       if (socket.id) this.socketId.set(socket.id);
+      // If we previously lost the connection, surface a brief reconnected banner
+      if (this.wasDisconnected) {
+        this.reconnectVariant.set('success');
+        this.reconnectMessage.set('Reconnected to server. Rooms are ephemeral and may reset.');
+        this.showReconnectBanner.set(true);
+        this.wasDisconnected = false;
+        // Auto-hide after a short delay
+        setTimeout(() => this.showReconnectBanner.set(false), 4000);
+      }
     });
     socket.on(
       'room:error',
@@ -188,6 +203,13 @@ export class RoomComponent implements OnDestroy {
       this.voteCount.set(progress.count ?? 0);
       this.voteTotal.set(progress.total ?? 0);
       this.votedIds.set(progress.votedIds ?? []);
+    });
+    // Show reconnect banner when disconnected; socket.io will auto-retry
+    socket.on('disconnect', () => {
+      this.wasDisconnected = true;
+      this.reconnectVariant.set('info');
+      this.reconnectMessage.set('Connection lost. Attempting to reconnect…');
+      this.showReconnectBanner.set(true);
     });
   }
 
