@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { LangSwitchComponent } from './i18n/lang-switch.component';
 
 @Component({
-  imports: [RouterModule],
+  imports: [RouterModule, LangSwitchComponent],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',

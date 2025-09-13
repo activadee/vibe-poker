@@ -1,0 +1,143 @@
+{
+  "common": {
+    "appName": "Planning Poker",
+    "cancel": "Cancel",
+    "dismiss": "Dismiss",
+    "errors": {
+      "unexpectedServer": "Unexpected response from server"
+    },
+    "save": "Save"
+  },
+  "common.cancel": "Missing value for 'common.cancel'",
+  "common.dismiss": "Missing value for 'common.dismiss'",
+  "common.save": "Missing value for 'common.save'",
+  "lobby": {
+    "create": {
+      "nameHelp": "3–30 characters",
+      "nameLabel": "Display Name",
+      "namePlaceholder": "e.g. Alice",
+      "submit": "Create Room",
+      "subtitle": "Enter your display name to start a new estimation session.",
+      "title": "Create a Room"
+    },
+    "errors": {
+      "createFailed": "Failed to create room",
+      "displayNameLength": "Display name must be 3–30 characters",
+      "invalidRoomInput": "Please enter a valid room code or link"
+    },
+    "join": {
+      "codeLabel": "Room Code or Link",
+      "codePlaceholder": "abc-123-xy or https://…/r/ABCD-1234",
+      "help": "Join is enabled when code is present.",
+      "observer": "Join as observer (cannot vote)",
+      "submit": "Join Room",
+      "subtitle": "Paste a room code or full link to join an existing session.",
+      "title": "Join a Room"
+    },
+    "subtitle": "Collaborative estimation for agile teams",
+    "title": "Planning Poker"
+  },
+  "lobby.create.nameHelp": "Missing value for 'lobby.create.nameHelp'",
+  "lobby.create.nameLabel": "Missing value for 'lobby.create.nameLabel'",
+  "lobby.create.namePlaceholder": "Missing value for 'lobby.create.namePlaceholder'",
+  "lobby.create.submit": "Missing value for 'lobby.create.submit'",
+  "lobby.create.subtitle": "Missing value for 'lobby.create.subtitle'",
+  "lobby.create.title": "Missing value for 'lobby.create.title'",
+  "lobby.join.codeLabel": "Missing value for 'lobby.join.codeLabel'",
+  "lobby.join.codePlaceholder": "Missing value for 'lobby.join.codePlaceholder'",
+  "lobby.join.help": "Missing value for 'lobby.join.help'",
+  "lobby.join.observer": "Missing value for 'lobby.join.observer'",
+  "lobby.join.submit": "Missing value for 'lobby.join.submit'",
+  "lobby.join.subtitle": "Missing value for 'lobby.join.subtitle'",
+  "lobby.join.title": "Missing value for 'lobby.join.title'",
+  "lobby.subtitle": "Missing value for 'lobby.subtitle'",
+  "lobby.title": "Missing value for 'lobby.title'",
+  "room": {
+    "error": {
+      "createNew": "Create a new room"
+    },
+    "errors": {
+      "join": "Something went wrong joining the room",
+      "missingName": "Please enter your display name"
+    },
+    "host": {
+      "deck": {
+        "fibonacci": "Fibonacci",
+        "tshirt": "T‑Shirt sizes"
+      },
+      "deckPreset": "Deck Preset",
+      "reset": "Reset",
+      "reveal": "Reveal",
+      "revote": "Revote",
+      "title": "Host Controls"
+    },
+    "join": {
+      "nameLabel": "Your name",
+      "namePlaceholder": "Alice",
+      "observer": "Join as observer (cannot vote)",
+      "submit": "Join Room",
+      "subtitle": "Your display name will be visible to others. Observers cannot vote.",
+      "title": "Join Room"
+    },
+    "leave": "Leave Room",
+    "participants": {
+      "title": "Participants",
+      "voted": "{{count}}/{{total}} voted"
+    },
+    "reconnect": {
+      "info": "Connection lost. Attempting to reconnect…",
+      "success": "Reconnected to server. Rooms are ephemeral and may reset."
+    },
+    "reset": {
+      "confirm": "Reset votes for this round?"
+    },
+    "share": {
+      "copied": "Link copied!",
+      "copy": "Copy Invite",
+      "invite": "Join this room:",
+      "label": "Share this room:",
+      "observer": "Join as observer",
+      "player": "Join as user"
+    },
+    "stats": {
+      "avgMedian": "Avg {{avg}} • Median {{median}}"
+    },
+    "story": {
+      "current": "Current Story",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Optional notes",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Enter story title"
+    },
+    "vote": {
+      "title": "Vote"
+    }
+  },
+  "room.error.createNew": "Missing value for 'room.error.createNew'",
+  "room.host.deck.fibonacci": "Missing value for 'room.host.deck.fibonacci'",
+  "room.host.deck.tshirt": "Missing value for 'room.host.deck.tshirt'",
+  "room.host.deckPreset": "Missing value for 'room.host.deckPreset'",
+  "room.host.reset": "Missing value for 'room.host.reset'",
+  "room.host.reveal": "Missing value for 'room.host.reveal'",
+  "room.host.revote": "Missing value for 'room.host.revote'",
+  "room.host.title": "Missing value for 'room.host.title'",
+  "room.join.nameLabel": "Missing value for 'room.join.nameLabel'",
+  "room.join.namePlaceholder": "Missing value for 'room.join.namePlaceholder'",
+  "room.join.observer": "Missing value for 'room.join.observer'",
+  "room.join.submit": "Missing value for 'room.join.submit'",
+  "room.join.subtitle": "Missing value for 'room.join.subtitle'",
+  "room.join.title": "Missing value for 'room.join.title'",
+  "room.leave": "Missing value for 'room.leave'",
+  "room.participants.title": "Missing value for 'room.participants.title'",
+  "room.participants.voted": "Missing value for 'room.participants.voted'",
+  "room.share.copied": "Missing value for 'room.share.copied'",
+  "room.share.copy": "Missing value for 'room.share.copy'",
+  "room.share.label": "Missing value for 'room.share.label'",
+  "room.stats.avgMedian": "Missing value for 'room.stats.avgMedian'",
+  "room.story.current": "Missing value for 'room.story.current'",
+  "room.story.notesLabel": "Missing value for 'room.story.notesLabel'",
+  "room.story.notesPlaceholder": "Missing value for 'room.story.notesPlaceholder'",
+  "room.story.titleLabel": "Missing value for 'room.story.titleLabel'",
+  "room.story.titlePlaceholder": "Missing value for 'room.story.titlePlaceholder'",
+  "room.vote.title": "Missing value for 'room.vote.title'"
+}

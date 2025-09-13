@@ -9,17 +9,20 @@ import { UiButtonDirective } from '../ui/button.directive';
 import { UiInputDirective } from '../ui/input.directive';
 import { UiCheckboxDirective } from '../ui/checkbox.directive';
 import { UiCardComponent } from '../ui/card/card.component';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { I18nService } from '../i18n/i18n.service';
 
 @Component({
   selector: 'app-lobby',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonDirective, UiInputDirective, UiCheckboxDirective, UiCardComponent],
+  imports: [CommonModule, FormsModule, UiButtonDirective, UiInputDirective, UiCheckboxDirective, UiCardComponent, TranslocoPipe],
   templateUrl: './lobby.component.html',
   styleUrls: ['./lobby.component.scss'],
 })
 export class LobbyComponent {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly i18n = inject(I18nService);
 
   name = '';
   roomCode = '';
@@ -38,7 +41,7 @@ export class LobbyComponent {
   async createRoom() {
     const hostName = this.name.trim();
     if (!this.nameValid()) {
-      this.error.set('Display name must be 3–30 characters');
+      this.error.set(this.i18n.t('lobby.errors.displayNameLength'));
       return;
     }
     this.error.set('');
@@ -61,12 +64,12 @@ export class LobbyComponent {
         // Navigate to the room (host elevation handled server-side via session)
         this.router.navigate(['/r', res.id]);
       } else {
-        this.error.set('Unexpected response from server');
+        this.error.set(this.i18n.t('common.errors.unexpectedServer'));
       }
     } catch (err) {
       // Keep user-facing message simple while still surfacing errors during development
       console.error('Failed to create room', err);
-      this.error.set('Failed to create room');
+      this.error.set(this.i18n.t('lobby.errors.createFailed'));
     } finally {
       this.loading.set(false);
     }
@@ -82,7 +85,7 @@ export class LobbyComponent {
     }
     const roomId = LobbyComponent.extractRoomId(input);
     if (!roomId) {
-      this.error.set('Please enter a valid room code or link');
+      this.error.set(this.i18n.t('lobby.errors.invalidRoomInput'));
       return;
     }
     this.error.set('');

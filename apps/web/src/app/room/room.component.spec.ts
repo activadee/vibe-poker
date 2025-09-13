@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject, of } from 'rxjs';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { RoomComponent } from './room.component';
+import { TranslocoTestingModule } from '@jsverse/transloco';
 import { By } from '@angular/platform-browser';
 import { VoteCardsComponent } from '../vote-cards/vote-cards.component';
 import { io } from 'socket.io-client';
@@ -32,7 +33,36 @@ describe('RoomComponent (FR-014 Revote)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [RoomComponent],
+      imports: [
+        TranslocoTestingModule.forRoot({
+          langs: {
+            en: {
+              common: { cancel: 'Cancel', save: 'Save', dismiss: 'Dismiss' },
+              room: {
+                error: { createNew: 'Create a new room' },
+                join: { submit: 'Join Room' },
+                host: { reveal: 'Reveal', revote: 'Revote' },
+                share: {
+                  label: 'Share this room:',
+                  copy: 'Copy Invite',
+                  invite: 'Join this room:',
+                  observer: 'Join as observer',
+                  player: 'Join as user'
+                },
+                leave: 'Leave Room',
+                reconnect: {
+                  info: 'Connection lost. Attempting to reconnect…',
+                  success: 'Reconnected to server. Rooms are ephemeral and may reset.'
+                },
+                participants: { voted: '{{count}}/{{total}} voted' }
+              }
+            }
+          },
+          translocoConfig: { availableLangs: ['en'], defaultLang: 'en' },
+          preloadLangs: true
+        }),
+        RoomComponent,
+      ],
       providers: [
         {
           provide: Router,
@@ -474,7 +504,22 @@ describe('RoomComponent (FR-014 Revote)', () => {
 describe('RoomComponent (FR-017 Deck presets)', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [RoomComponent],
+      imports: [
+        TranslocoTestingModule.forRoot({
+          langs: {
+            en: {
+              common: { cancel: 'Cancel', save: 'Save', dismiss: 'Dismiss' },
+              room: {
+                host: { deckPreset: 'Deck Preset' },
+                participants: { voted: '{{count}}/{{total}} voted' }
+              }
+            }
+          },
+          translocoConfig: { availableLangs: ['en'], defaultLang: 'en' },
+          preloadLangs: true,
+        }),
+        RoomComponent,
+      ],
       providers: [
         {
           provide: Router,

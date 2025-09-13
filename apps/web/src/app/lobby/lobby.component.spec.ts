@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { LobbyComponent } from './lobby.component';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
+import { TranslocoTestingModule } from '@jsverse/transloco';
 
 describe('LobbyComponent', () => {
   let httpMock: HttpTestingController;
@@ -10,7 +11,23 @@ describe('LobbyComponent', () => {
   beforeEach(() => {
     navigateSpy = jest.fn();
     TestBed.configureTestingModule({
-      imports: [LobbyComponent, HttpClientTestingModule],
+      imports: [
+        TranslocoTestingModule.forRoot({
+          langs: {
+            en: {
+              lobby: {
+                title: 'Planning Poker',
+                create: { title: 'Create a Room' },
+                join: { title: 'Join a Room' }
+              }
+            }
+          },
+          translocoConfig: { availableLangs: ['en'], defaultLang: 'en' },
+          preloadLangs: true,
+        }),
+        LobbyComponent,
+        HttpClientTestingModule,
+      ],
       providers: [
         { provide: Router, useValue: { navigate: navigateSpy } },
       ],
