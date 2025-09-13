@@ -54,6 +54,10 @@ npm run lint
 ## Operational Notes
 
 - Logs are JSON on stdout; ingest with your platform’s logging agent.
+- Correlation ID precedence for each request:
+  1) `x-correlation-id`/`x-request-id` header if present
+  2) Middleware-generated UUID (stored in AsyncLocalStorage)
+  3) Fallbacks for WS only: session UID, then socket id
+  All logs for the same HTTP request now reuse the same correlation ID (including timing + event logs).
 - Provide `x-correlation-id` from the client or reverse proxy to thread related actions.
 - Sensitive keys (e.g., `token`, `password`, `secret`, `authorization`, `cookie`) are redacted.
-

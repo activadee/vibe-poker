@@ -29,7 +29,10 @@ export class RoomsController {
     const ownerSid = r.session?.uid ?? crypto.randomUUID();
     const room = this.rooms.create(hostName, ownerSid);
     const latencyMs = stop({ id: room.id });
-    const correlationId = ((req.headers as Record<string, unknown> | undefined)?.['x-correlation-id'] as string | undefined) || ownerSid;
+    const correlationId =
+      this.logging.getCorrelationId?.() ||
+      ((req.headers as Record<string, unknown> | undefined)?.['x-correlation-id'] as string | undefined) ||
+      ownerSid;
     this.logging.event('room_create', { room_id: room.id }, { correlationId, latencyMs });
     return { id: room.id, expiresAt: room.expiresAt };
   }
