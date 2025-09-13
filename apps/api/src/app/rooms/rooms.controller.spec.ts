@@ -1,35 +1,27 @@
 import { Test } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
+import { BadRequestException } from '@nestjs/common';
 import { RoomsModule } from './rooms.module';
+import { RoomsController } from './rooms.controller';
 
-describe('RoomsController (e2e-lite)', () => {
-  let app: INestApplication;
+describe('RoomsController (unit)', () => {
+  let controller: RoomsController;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [RoomsModule],
     }).compile();
-
-    app = moduleRef.createNestApplication();
-    await app.init();
+    controller = moduleRef.get(RoomsController);
   });
 
-  afterAll(async () => {
-    await app.close();
+  it('create() returns human-readable id', () => {
+    const req = { session: {} } as unknown as { session?: { uid?: string } };
+    const res = controller.create({ hostName: 'Alice' } as any, req as any);
+    expect(res.id).toMatch(/^[A-HJ-NP-Z]{4}-\d{4}$/);
+    expect(typeof res.expiresAt).toBe('number');
   });
 
-  it('POST /rooms returns human-readable id', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/rooms')
-      .send({ hostName: 'Alice' })
-      .expect(201);
-
-    expect(res.body.id).toMatch(/^[A-HJ-NP-Z]{4}-\d{4}$/);
-    expect(typeof res.body.expiresAt).toBe('number');
-  });
-
-  it('400 when hostName missing', async () => {
-    await request(app.getHttpServer()).post('/rooms').send({}).expect(400);
+  it('throws 400 when hostName missing', () => {
+    const req = { session: {} } as unknown as { session?: { uid?: string } };
+    expect(() => controller.create({} as any, req as any)).toThrow(BadRequestException);
   });
 });

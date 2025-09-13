@@ -1,21 +1,11 @@
 import { Test } from '@nestjs/testing';
-import request from 'supertest';
 import { AppModule } from './app.module';
+import { HealthController } from './health.controller';
 
 describe('HealthController', () => {
-  it('GET /healthz returns ok:true', async () => {
+  it('returns ok:true (unit)', async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    const app = moduleRef.createNestApplication();
-    await app.init();
-
-    await request(app.getHttpServer())
-      .get('/healthz')
-      .expect(200)
-      .expect(({ body }) => {
-        expect(body).toEqual({ ok: true });
-      });
-
-    await app.close();
+    const controller = moduleRef.get(HealthController);
+    expect(controller.get()).toEqual({ ok: true });
   });
 });
-

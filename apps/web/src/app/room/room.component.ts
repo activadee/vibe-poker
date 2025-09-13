@@ -161,6 +161,14 @@ export class RoomComponent implements OnDestroy {
         this.reconnectVariant.set('success');
         this.reconnectMessage.set('Reconnected to server. Rooms are ephemeral and may reset.');
         this.showReconnectBanner.set(true);
+        // Auto-rejoin room with prior identity
+        const nm = (this.name || localStorage.getItem('displayName') || '').trim();
+        const rid = this.roomId();
+        if (nm && rid) {
+          const payload: RoomJoinPayload = { roomId: rid, name: nm };
+          if (this.joinAsObserver) payload.role = 'observer';
+          socket.emit('room:join', payload);
+        }
         this.wasDisconnected = false;
         // Auto-hide after a short delay
         setTimeout(() => this.showReconnectBanner.set(false), 4000);

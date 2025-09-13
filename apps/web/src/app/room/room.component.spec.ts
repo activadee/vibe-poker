@@ -287,6 +287,8 @@ describe('RoomComponent (FR-014 Revote)', () => {
     jest.useFakeTimers();
     const fixture = TestBed.createComponent(RoomComponent);
     const comp = fixture.componentInstance as any;
+    comp.roomId.set('ROOMZ');
+    comp.name = 'Hannah';
 
     // Attach fake socket and register handlers
     const handlers: Record<string, (arg?: unknown) => void> = {};
@@ -308,11 +310,15 @@ describe('RoomComponent (FR-014 Revote)', () => {
     expect(comp.showReconnectBanner()).toBe(true);
     expect(html.textContent).toContain('Connection lost. Attempting to reconnect');
 
-    // Now reconnect; banner should flip to success and auto-hide
+    // Now reconnect; banner should flip to success and auto-join should emit
     handlers['connect']?.();
     fixture.detectChanges();
     html = fixture.nativeElement as HTMLElement;
     expect(html.textContent).toContain('Reconnected to server');
+    expect(fakeSocket.emit).toHaveBeenCalledWith(
+      'room:join',
+      expect.objectContaining({ roomId: 'ROOMZ', name: 'Hannah' })
+    );
 
     // After timer elapses, banner should hide
     jest.runOnlyPendingTimers();
