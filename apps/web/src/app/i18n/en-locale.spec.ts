@@ -19,7 +19,7 @@ describe('en.json locale integrity', () => {
     expect(dottedKeys).toEqual([]);
 
     // No values starting with "Missing value for '...'
-    const placeholderPattern = /^Missing value for '\S+'\'?/;
+    const placeholderPattern = /^\s*Missing value for\s+'[^']+'\s*$/;
     const offenders: Array<{ key: string; value: unknown }> = [];
 
     const walk = (obj: unknown, prefix: string[] = []) => {
@@ -62,4 +62,3 @@ describe('en.json locale integrity', () => {
     expect((data.lobby?.join?.title ?? '').length).toBeGreaterThan(0);
   });
 });
-

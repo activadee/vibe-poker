@@ -221,6 +221,7 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
   // Safe room payload: exclude votes/stats before reveal; otherwise include them.
   private safeRoom(room: Room): Room {
     if (!room.revealed) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { votes: _omitVotes, stats: _omitStats, ...rest } = room;
       // Also shallow-copy participants and optionally story to avoid leaking unexpected props
       const shaped: Room = {
