@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { redactSecrets } from '../security/redact';
-import { Room } from '@scrum-poker/shared-types';
+import { CustomDeck, Room } from '@scrum-poker/shared-types';
 import type { VoteProgressEvent, VoteStats } from '@scrum-poker/shared-types';
 import type { RoomsRepository } from './repository/rooms.repository';
 import { ROOMS_REPOSITORY } from './repository/tokens';
@@ -90,6 +90,42 @@ export class RoomsService {
 
   async setDeck(roomId: string, deckId: NonNullable<Room['deckId']>) {
     return this.repo.setDeck(roomId, deckId);
+  }
+
+  /** Upsert a custom deck on the room after validating constraints. */
+  async upsertCustomDeck(roomId: string, deck: CustomDeck) {
+    const sanitized = this.sanitizeDeck(deck);
+    const room = await this.repo.get(roomId);
+    if (!room) throw new Error('Room not found');
+    const existing = Array.isArray(room.customDecks) ? room.customDecks : [];
+    // Ensure unique name within room (case-insensitive) except when updating same id
+    const nameLower = sanitized.name.toLowerCase();
+    for (const d of existing) {
+      if (d.id !== sanitized.id && d.name.toLowerCase() === nameLower) {
+        throw new Error('Duplicate deck name');
+      }
+    }
+    return this.repo.upsertCustomDeck(roomId, sanitized);
+  }
+
+  /** Delete custom deck by id. If active, repository will unset deckId. */
+  async deleteCustomDeck(roomId: string, deckId: string) {
+    if (!deckId || typeof deckId !== 'string' || !deckId.trim()) {
+      throw new Error('Invalid deck id');
+    }
+    return this.repo.deleteCustomDeck(roomId, deckId.trim());
+  }
+
+  private sanitizeDeck(deck: CustomDeck): CustomDeck {
+    const id = (deck?.id ?? '').toString().trim();
+    const name = (deck?.name ?? '').toString().trim();
+    const values = Array.isArray(deck?.values) ? deck.values.map((v) => (v ?? '').toString().trim()).filter((v) => !!v) : [];
+    if (!id) throw new Error('Invalid deck id');
+    if (!name) throw new Error('Invalid deck name');
+    if (values.length === 0 || values.length > 50) throw new Error('Invalid deck values');
+    const tooLong = values.some((v) => v.length > 8);
+    if (tooLong) throw new Error('Invalid deck value length');
+    return { id, name, values };
   }
 
   /**

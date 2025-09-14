@@ -616,3 +616,110 @@ describe('RoomComponent (FR-017 Deck presets)', () => {
     expect(vc.selected()).toBeNull();
   });
 });
+
+describe('RoomComponent (Custom Decks)', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [
+        TranslocoTestingModule.forRoot({
+          langs: {
+            en: {
+              common: { cancel: 'Cancel', save: 'Save' },
+              room: { host: { deckPreset: 'Deck' } },
+            },
+          },
+          translocoConfig: { availableLangs: ['en'], defaultLang: 'en' },
+          preloadLangs: true,
+        }),
+        RoomComponent,
+      ],
+      providers: [
+        {
+          provide: Router,
+          useValue: {
+            navigateByUrl: jest.fn(),
+            createUrlTree: jest.fn(() => ({})),
+            serializeUrl: jest.fn(() => '/'),
+            events: { subscribe: () => ({ unsubscribe: () => undefined }) },
+          },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: of(convertToParamMap({ roomId: 'R1' })),
+            snapshot: { queryParamMap: convertToParamMap({}) },
+          },
+        },
+      ],
+    }).compileComponents();
+  });
+
+  it('emits deck:upsert and deck:delete from Manage Decks actions', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+    comp.joined.set(true);
+    comp.socketId.set('h1');
+    comp.participants.set([{ id: 'h1', name: 'Host', role: 'host' }]);
+    const fakeSocket = {
+      emit: jest.fn(),
+      on: jest.fn(),
+      removeAllListeners: jest.fn(),
+      disconnect: jest.fn(),
+    } as any;
+    comp.socket = fakeSocket;
+
+    // Save a deck
+    comp.saveCustomDeck({ id: 'half', name: 'Half Steps', values: ['0.5','1','1.5'] });
+    expect(fakeSocket.emit).toHaveBeenCalledWith('deck:upsert', {
+      deck: { id: 'half', name: 'Half Steps', values: ['0.5','1','1.5'] },
+    });
+
+    // Delete a deck
+    comp.deleteCustomDeck('half');
+    expect(fakeSocket.emit).toHaveBeenCalledWith('deck:delete', { deckId: 'half' });
+  });
+
+  it('switching to a custom deck updates values and clears selection on room:state', () => {
+    const fixture = TestBed.createComponent(RoomComponent);
+    const comp = fixture.componentInstance as any;
+    comp.joined.set(true);
+    comp.socketId.set('p1');
+    comp.participants.set([{ id: 'p1', name: 'Player', role: 'player' }]);
+
+    // Attach fake socket and listeners
+    const handlers: Record<string, (arg?: unknown) => void> = {};
+    const fakeSocket = {
+      on: (evt: string, cb: (arg?: unknown) => void) => {
+        handlers[evt] = cb;
+      },
+      emit: jest.fn(),
+      removeAllListeners: jest.fn(),
+      disconnect: jest.fn(),
+    } as any;
+    comp.socket = fakeSocket;
+    comp.setupSocketListeners(fakeSocket);
+    fixture.detectChanges();
+
+    // Ensure VoteCards is present and has default Fibonacci values
+    const vcDE = fixture.debugElement.query(By.directive(VoteCardsComponent));
+    const vc = vcDE.componentInstance as VoteCardsComponent;
+    expect(vc.values()).toEqual(['1', '2', '3', '5', '8', '13', '21', '?', '☕']);
+    vc.selected.set('5');
+
+    // Server broadcasts a custom deck and selects it
+    handlers['room:state']?.({
+      id: 'R1',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 1000,
+      participants: [{ id: 'p1', name: 'Player', role: 'player' }],
+      customDecks: [{ id: 'half', name: 'Half', values: ['0.5','1','1.5'] }],
+      deckId: 'half',
+    } as any);
+
+    fixture.detectChanges();
+
+    // Values should now match custom deck
+    expect(vc.values()).toEqual(['0.5','1','1.5']);
+    expect(vc.selected()).toBeNull();
+  });
+});

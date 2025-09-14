@@ -40,6 +40,8 @@ describe('RoomsGateway', () => {
             castVote: jest.fn(),
             reset: jest.fn(),
             computeProgress: jest.fn(),
+            upsertCustomDeck: jest.fn(),
+            deleteCustomDeck: jest.fn(),
           },
         },
       ],
@@ -599,6 +601,77 @@ describe('RoomsGateway', () => {
         'room:error',
         expect.objectContaining({ code: 'invalid_payload' })
       );
+    });
+  });
+
+  describe('Custom Decks (deck:upsert, deck:delete)', () => {
+    it('host can upsert custom deck and broadcasts room:state with updated customDecks', async () => {
+      const room = makeRoom('ROOMC');
+      room.participants = [
+        { id: 'h1', name: 'Hannah', role: 'host' },
+      ];
+      rooms.get.mockResolvedValue(room);
+      const after = { ...room, customDecks: [{ id: 'half', name: 'Half Steps', values: ['0.5','1','1.5'] }] } as Room;
+      rooms.upsertCustomDeck.mockResolvedValue(after as any);
+      (gateway as any).socketRoom.set('h1', 'ROOMC');
+      const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
+
+      await (gateway as any).handleDeckUpsert({ deck: { id: 'half', name: 'Half Steps', values: ['0.5','1','1.5'] } } as any, host);
+
+      const toMock = (gateway as any).server.to as jest.Mock;
+      expect(toMock).toHaveBeenCalledWith('room:ROOMC');
+      const state = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1] as Room | undefined;
+      expect(state?.customDecks?.[0]?.id).toBe('half');
+      expect(state?.customDecks?.[0]?.values).toEqual(['0.5','1','1.5']);
+    });
+
+    it('non-host cannot upsert custom deck', async () => {
+      const room = makeRoom('ROOMC2');
+      room.participants = [
+        { id: 'p1', name: 'Paula', role: 'player' },
+      ];
+      rooms.get.mockResolvedValue(room);
+      (gateway as any).socketRoom.set('p1', 'ROOMC2');
+      const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
+
+      await (gateway as any).handleDeckUpsert({ deck: { id: 'x', name: 'X', values: ['1'] } } as any, client);
+
+      expect(client.emit).toHaveBeenCalledWith('room:error', expect.objectContaining({ code: 'forbidden' }));
+      const toMock = (gateway as any).server.to as jest.Mock;
+      expect(toMock).not.toHaveBeenCalledWith('room:ROOMC2');
+    });
+
+    it('rejects invalid upsert payload', async () => {
+      const room = makeRoom('ROOMC3');
+      room.participants = [
+        { id: 'h1', name: 'Hannah', role: 'host' },
+      ];
+      rooms.get.mockResolvedValue(room);
+      (gateway as any).socketRoom.set('h1', 'ROOMC3');
+      const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
+
+      // Too long value > 8 chars
+      await (gateway as any).handleDeckUpsert({ deck: { id: 'half', name: 'Half', values: ['123456789'] } } as any, host);
+      expect(host.emit).toHaveBeenCalledWith('room:error', expect.objectContaining({ code: 'invalid_payload' }));
+    });
+
+    it('host can delete custom deck and broadcasts room:state', async () => {
+      const room = makeRoom('ROOMC4');
+      room.participants = [
+        { id: 'h1', name: 'Hannah', role: 'host' },
+      ];
+      rooms.get.mockResolvedValue(room);
+      const after = { ...room, customDecks: [] } as Room;
+      rooms.deleteCustomDeck.mockResolvedValue(after as any);
+      (gateway as any).socketRoom.set('h1', 'ROOMC4');
+      const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
+
+      await (gateway as any).handleDeckDelete({ deckId: 'half' } as any, host);
+
+      const toMock = (gateway as any).server.to as jest.Mock;
+      expect(toMock).toHaveBeenCalledWith('room:ROOMC4');
+      const state = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1] as Room | undefined;
+      expect(state?.customDecks).toEqual([]);
     });
   });
 });

@@ -1,4 +1,4 @@
-import type { DeckId, Participant, Room, Story } from '@scrum-poker/shared-types';
+import type { CustomDeck, DeckId, Participant, Room, Story } from '@scrum-poker/shared-types';
 import type { RoomsRepository } from './rooms.repository';
 import Redis from 'ioredis';
 import { randomUUID } from 'node:crypto';
@@ -182,6 +182,28 @@ export class RedisRoomsRepository implements RoomsRepository {
   async setDeck(roomId: string, deckId: DeckId): Promise<Room> {
     const room = await this.ensure(roomId);
     room.deckId = deckId;
+    await this.write(room);
+    return room;
+  }
+
+  async upsertCustomDeck(roomId: string, deck: CustomDeck): Promise<Room> {
+    const room = await this.ensure(roomId);
+    const list = (room.customDecks = Array.isArray(room.customDecks) ? room.customDecks : []);
+    const idx = list.findIndex((d) => d.id === deck.id);
+    const next = { id: deck.id, name: deck.name, values: [...deck.values] };
+    if (idx >= 0) list.splice(idx, 1, next);
+    else list.push(next);
+    await this.write(room);
+    return room;
+  }
+
+  async deleteCustomDeck(roomId: string, deckId: string): Promise<Room> {
+    const room = await this.ensure(roomId);
+    const list = (room.customDecks = Array.isArray(room.customDecks) ? room.customDecks : []);
+    room.customDecks = list.filter((d) => d.id !== deckId);
+    if (room.deckId === deckId) {
+      delete room.deckId;
+    }
     await this.write(room);
     return room;
   }

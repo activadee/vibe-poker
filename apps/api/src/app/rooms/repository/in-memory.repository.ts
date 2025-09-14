@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { DeckId, Participant, Room, Story } from '@scrum-poker/shared-types';
+import type { CustomDeck, DeckId, Participant, Room, Story } from '@scrum-poker/shared-types';
 import type { RoomsRepository } from './rooms.repository';
 
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // exclude I/O
@@ -124,6 +124,26 @@ export class InMemoryRoomsRepository implements RoomsRepository {
   async setDeck(roomId: string, deckId: DeckId): Promise<Room> {
     const room = this.ensure(roomId);
     room.deckId = deckId;
+    return room;
+  }
+
+  async upsertCustomDeck(roomId: string, deck: CustomDeck): Promise<Room> {
+    const room = this.ensure(roomId);
+    const list = (room.customDecks = Array.isArray(room.customDecks) ? room.customDecks : []);
+    const idx = list.findIndex((d) => d.id === deck.id);
+    if (idx >= 0) list.splice(idx, 1, { id: deck.id, name: deck.name, values: [...deck.values] });
+    else list.push({ id: deck.id, name: deck.name, values: [...deck.values] });
+    return room;
+  }
+
+  async deleteCustomDeck(roomId: string, deckId: string): Promise<Room> {
+    const room = this.ensure(roomId);
+    const list = (room.customDecks = Array.isArray(room.customDecks) ? room.customDecks : []);
+    room.customDecks = list.filter((d) => d.id !== deckId);
+    // If the active deck was this custom id, unset it; gateway will set explicitly via deck:set
+    if (room.deckId === deckId) {
+      delete room.deckId;
+    }
     return room;
   }
 }
