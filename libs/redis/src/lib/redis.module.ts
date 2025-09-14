@@ -2,7 +2,6 @@ import { DynamicModule, Module, OnModuleDestroy } from '@nestjs/common';
 import type Redis from 'ioredis';
 import { REDIS_CLIENT } from './redis.tokens';
 
-// Small helper to gracefully quit Redis on shutdown
 class RedisShutdownService implements OnModuleDestroy {
   constructor(private readonly client: Redis | null) {}
   async onModuleDestroy() {
@@ -43,3 +42,4 @@ export class RedisModule {
     };
   }
 }
+

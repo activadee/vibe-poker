@@ -1,10 +1,10 @@
-# RedisModule
+# Redis Module (Nx library)
 
-Provides a singleton Redis client via NestJS DI with token `REDIS_CLIENT`.
+This workspace provides a reusable Nx library `@scrum-poker/redis` exposing a NestJS module and DI token for a singleton Redis client.
 
 ## Usage
 
-- The module is imported by `RoomsModule` and exported client is used to construct `RedisRoomsRepository` when `ROOMS_BACKEND=redis`.
+- Import the module in any Nest app (e.g., RoomsModule) and use the exported client to construct repositories/services when `ROOMS_BACKEND=redis`.
 - When `ROOMS_BACKEND` is not `redis`, the client resolves to `null` and no connection is created.
 
 ## Env
@@ -16,3 +16,4 @@ Provides a singleton Redis client via NestJS DI with token `REDIS_CLIENT`.
 
 `RedisShutdownService` calls `QUIT` on the client during Nest shutdown to close the connection gracefully.
 
+See `libs/redis/README.md` for library-specific notes.

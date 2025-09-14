@@ -1,5 +1,5 @@
 /**
- * RedisModule unit tests (uses ioredis-mock to avoid network)
+ * Redis library tests (TDD)
  */
 jest.mock('ioredis', () => require('ioredis-mock'));
 
@@ -8,7 +8,7 @@ import type Redis from 'ioredis';
 import { RedisModule } from './redis.module';
 import { REDIS_CLIENT } from './redis.tokens';
 
-describe('RedisModule', () => {
+describe('@scrum-poker/redis', () => {
   const prevEnv = { ...process.env };
   afterEach(() => {
     process.env = { ...prevEnv };
@@ -32,12 +32,11 @@ describe('RedisModule', () => {
     const a = moduleRef.get<Redis | null>(REDIS_CLIENT);
     const b = moduleRef.get<Redis | null>(REDIS_CLIENT);
     expect(a).toBeTruthy();
-    expect(b).toBe(a); // singleton
-    // Verify basic command path via mock
+    expect(b).toBe(a);
     await a!.set('k', 'v');
     const v = await a!.get('k');
     expect(v).toBe('v');
-    await moduleRef.close(); // triggers shutdown service which quits the client
+    await moduleRef.close();
   });
 });
 

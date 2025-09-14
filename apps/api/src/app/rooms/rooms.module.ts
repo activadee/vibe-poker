@@ -7,8 +7,7 @@ import { PerfService } from '../perf/perf.service';
 import { LoggingService } from '../logging/logging.service';
 import { ROOMS_REPOSITORY } from './repository/tokens';
 import { InMemoryRoomsRepository } from './repository/in-memory.repository';
-import { RedisModule } from '../redis/redis.module';
-import { REDIS_CLIENT } from '../redis/redis.tokens';
+import { RedisModule, REDIS_CLIENT } from '@scrum-poker/redis';
 
 function provideRepository() {
   const backend = (process.env.ROOMS_BACKEND || 'memory').toLowerCase();
