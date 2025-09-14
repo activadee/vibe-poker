@@ -11,11 +11,8 @@ export class MetricsController {
     const snapshot = this.perf.snapshot();
     // Include lightweight room stats helpful during load tests
     const roomIds = await this.rooms.allIds();
-    const participantCounts: number[] = [];
-    for (const id of roomIds) {
-      const r = await this.rooms.get(id);
-      participantCounts.push(r?.participants.length ?? 0);
-    }
+    const fetchedRooms = await Promise.all(roomIds.map((id) => this.rooms.get(id)));
+    const participantCounts = fetchedRooms.map((r) => r?.participants.length ?? 0);
     const rooms = {
       total: roomIds.length,
       max_participants: participantCounts.length ? Math.max(...participantCounts) : 0,

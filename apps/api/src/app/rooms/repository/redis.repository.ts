@@ -8,6 +8,8 @@ const DIGITS = '0123456789';
 const ID_LETTER_COUNT = 4;
 const ID_DIGIT_COUNT = 4;
 const MAX_ID_ATTEMPTS = 1000;
+// TTL for provisional ID claim to prevent indefinite locks if create() crashes
+const ID_CLAIM_TTL_MS = 60_000;
 
 export class RedisRoomsRepository implements RoomsRepository {
   readonly backend = 'redis' as const;
@@ -26,6 +28,13 @@ export class RedisRoomsRepository implements RoomsRepository {
     return `${this.prefix}:${id}:owner`;
   }
 
+  private async tryClaimId(id: string): Promise<boolean> {
+    // Atomically claim the room ID to avoid TOCTOU races under concurrency
+    // Using SET NX PX ensures we don't leave indefinite locks on crash
+    const res = await this.redis.set(this.key(id), '__CLAIM__', 'PX', ID_CLAIM_TTL_MS, 'NX');
+    return res === 'OK';
+  }
+
   private generateId = async (): Promise<string> => {
     const pick = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
     for (let attempt = 0; attempt < MAX_ID_ATTEMPTS; attempt++) {
@@ -33,10 +42,12 @@ export class RedisRoomsRepository implements RoomsRepository {
       for (let i = 0; i < ID_LETTER_COUNT; i++) id += pick(LETTERS);
       id += '-';
       for (let i = 0; i < ID_DIGIT_COUNT; i++) id += pick(DIGITS);
-      const exists = await this.redis.exists(this.key(id));
-      if (!exists) return id;
+      if (await this.tryClaimId(id)) return id;
     }
-    return randomUUID().slice(0, 8).toUpperCase();
+    // Fallback: use UUID slice; attempt to claim once, then return regardless
+    const id = randomUUID().slice(0, 8).toUpperCase();
+    await this.tryClaimId(id);
+    return id;
   };
 
   async create(_hostName: string, ownerSid: string, ttlMs: number): Promise<Room> {
@@ -46,6 +57,7 @@ export class RedisRoomsRepository implements RoomsRepository {
     const key = this.key(id);
     const ownerKey = this.ownerKey(id);
     // Persist room JSON and set TTL on both keys
+    // Overwrite claim with actual payload
     await this.redis.set(key, JSON.stringify(room));
     await this.redis.set(ownerKey, ownerSid);
     const expAtMs = room.expiresAt;
@@ -83,12 +95,20 @@ export class RedisRoomsRepository implements RoomsRepository {
   }
 
   async allIds(): Promise<string[]> {
-    // Use KEYS for simplicity (rooms are ephemeral and low cardinality)
-    const keys = await this.redis.keys(`${this.prefix}:*`);
-    // Filter only primary room keys (exclude :owner)
-    const ids = keys
-      .filter((k) => (k.match(/:/g) ?? []).length === 1)
-      .map((k) => k.split(':')[1]);
+    const ids: string[] = [];
+    let cursor = '0';
+    const pattern = `${this.prefix}:*`;
+    do {
+      const [next, batch] = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', '100');
+      for (const k of batch) {
+        // Only primary room keys (exclude :owner)
+        const lastColon = k.lastIndexOf(':');
+        if (lastColon === this.prefix.length) {
+          ids.push(k.substring(lastColon + 1));
+        }
+      }
+      cursor = next;
+    } while (cursor !== '0');
     return ids;
   }
 

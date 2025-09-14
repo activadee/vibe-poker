@@ -29,10 +29,12 @@ Note: The model favors simplicity and atomicity over fine-grained structures; it
 
 When `ROOMS_BACKEND=redis` and `REDIS_URL` are set, the gateway enables the Redis adapter:
 
+```ts
 // Prefer DI: inject REDIS_CLIENT and duplicate it
 const pub = injectedRedisClient; // from DI
 const sub = pub.duplicate();
 io.adapter(createAdapter(pub, sub));
+```
 
 This preserves current CORS and rate limit behavior and makes `server.to(roomId).emit(...)` reach clients connected to any instance.
 
@@ -44,4 +46,3 @@ Set `ROOMS_BACKEND=memory` to revert to in-memory storage. No API changes are re
 
 - Repository contract tests cover both memory and Redis (using `ioredis-mock`).
 - Existing service, gateway, controller, and sweeper tests were adapted to async service methods.
-

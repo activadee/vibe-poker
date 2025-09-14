@@ -9,21 +9,6 @@ import { ROOMS_REPOSITORY } from './repository/tokens';
 import { InMemoryRoomsRepository } from './repository/in-memory.repository';
 import { RedisModule, REDIS_CLIENT } from '@scrum-poker/redis';
 
-function provideRepository() {
-  const backend = (process.env.ROOMS_BACKEND || 'memory').toLowerCase();
-  if (backend === 'redis') {
-    // Lazy import to avoid dev deps when not needed
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const Redis = require('ioredis');
-    const url = process.env.REDIS_URL || 'redis://localhost:6379';
-    const client = new Redis(url);
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { RedisRoomsRepository } = require('./repository/redis.repository');
-    return new RedisRoomsRepository(client);
-  }
-  return new InMemoryRoomsRepository();
-}
-
 @Module({
   imports: [RedisModule.forRoot()],
   providers: [
@@ -35,6 +20,10 @@ function provideRepository() {
         if (backend === 'redis') {
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const { RedisRoomsRepository } = require('./repository/redis.repository');
+          if (!redis) {
+            // Fallback in tests or when Redis client is unavailable
+            return new InMemoryRoomsRepository();
+          }
           return new RedisRoomsRepository(redis as any);
         }
         return new InMemoryRoomsRepository();
