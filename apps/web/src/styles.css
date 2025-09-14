@@ -1,0 +1,56 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+
+/* Tailwind v4 CSS-first theme tokens */
+@theme {
+  /* Brand palette */
+  --color-primary-50:  #eef2f9;
+  --color-primary-100: #e3e8f3;
+  --color-primary-200: #c8d3e7;
+  --color-primary-300: #a1b5d6;
+  --color-primary-400: #7390bf;
+  --color-primary-500: #3f689f;
+  --color-primary-600: #2f507d;
+  --color-primary-700: #253f62;
+  --color-primary-800: #1f344f;
+  --color-primary-900: #1a2a40;
+  --color-primary:      #1f344f;
+
+  /* Surface tokens */
+  --color-surface:        #ffffff;
+  --color-surface-faint:  #f8fafc;
+  --color-surface-muted:  #f1f5f9;
+
+  /* Shadows */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06);
+
+  /* Typography */
+  --font-sans: Inter, ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/* App design tokens (non-Tailwind custom props) */
+:root {
+  /* Sizing */
+  --touch-target: 44px;
+  --radius: 12px;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Grid tokens */
+  --card-min: 68px; /* minimum card column size in vote grid */
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0; /* avoid default 8px causing unwanted scrollbars */
+  background-color: #f8fafc; /* surface.faint */
+  color: #1e293b;           /* slate-800 equivalent */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
