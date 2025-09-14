@@ -10,6 +10,13 @@ export default [
             "**/*.ts"
         ],
         rules: {
+            "@angular-eslint/component-max-inline-declarations": [
+                "error",
+                {
+                    template: 0,
+                    styles: 0
+                }
+            ],
             "@angular-eslint/directive-selector": [
                 "error",
                 {
@@ -34,5 +41,13 @@ export default [
         ],
         // Override or add rules here
         rules: {}
+    },
+    {
+        files: [
+            "**/*.spec.ts"
+        ],
+        rules: {
+            "@angular-eslint/component-max-inline-declarations": "off"
+        }
     }
 ];

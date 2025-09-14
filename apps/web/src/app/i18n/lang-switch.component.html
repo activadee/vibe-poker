@@ -1,0 +1,13 @@
+<div class="lang-switch" aria-label="Language switcher">
+  <label for="langSelect" class="sr-only">Language</label>
+  <select
+    id="langSelect"
+    class="lang-select"
+    [value]="active()"
+    (change)="onChange($event)"
+  >
+    @for (item of langs; track $index) {
+      <option [value]="item">{{ item }}</option>
+    }
+  </select>
+</div>

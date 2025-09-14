@@ -78,3 +78,13 @@ Files touched:
 - Lint: `nx run web:lint`
 
 Tailwind classes are available anywhere in `apps/web/src/**/*.html|ts`.
+
+## App Shell
+
+The application uses a persistent shell that wraps all routed views:
+
+- `<app-header>` — sticky top header with brand link and the language switch.
+- `<main id="content">` — centered, responsive content container hosting the `router-outlet`.
+- `<app-footer>` — muted footer with external links.
+
+Structure lives under `apps/web/src/app/shell/*` and is composed by the root `App` component via `<app-shell>`. The layout uses Tailwind utilities (`min-h-screen`, `flex`, `flex-col`) to keep the footer at the bottom and the header fixed while scrolling.
