@@ -21,8 +21,12 @@ import { RedisModule, REDIS_CLIENT } from '@scrum-poker/redis';
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const { RedisRoomsRepository } = require('./repository/redis.repository');
           if (!redis) {
-            // Fallback in tests or when Redis client is unavailable
-            return new InMemoryRoomsRepository();
+            const isTest = process.env.NODE_ENV === 'test';
+            if (isTest) return new InMemoryRoomsRepository();
+            throw new Error(
+              'REDIS_CLIENT unavailable while ROOMS_BACKEND=redis. ' +
+                'Set REDIS_URL (and optionally REDIS_USERNAME/REDIS_PASSWORD) or switch ROOMS_BACKEND=memory.'
+            );
           }
           return new RedisRoomsRepository(redis as any);
         }
