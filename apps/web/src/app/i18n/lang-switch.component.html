@@ -1,0 +1,7 @@
+<div class="lang-switch" aria-label="Language switcher">
+  <label for="langSelect" class="sr-only">Language</label>
+  <select id="langSelect" class="lang-select" [value]="active()" (change)="onChange($event)">
+    <option *ngFor="let l of langs" [value]="l">{{ l }}</option>
+  </select>
+</div>
+
