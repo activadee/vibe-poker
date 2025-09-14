@@ -1,5 +1,5 @@
 // WebSocket event and payload contracts
-import type { DeckId, Story,Role } from './domain';
+import type { DeckId, Story, Role, CustomDeck } from './domain';
 
 export interface RoomJoinPayload {
   roomId: string;
@@ -32,6 +32,15 @@ export interface StorySetPayload {
 
 export interface DeckSetPayload {
   deckId: DeckId;
+}
+
+// Custom deck management (host-only)
+export interface DeckUpsertPayload {
+  deck: CustomDeck;
+}
+
+export interface DeckDeletePayload {
+  deckId: string;
 }
 
 // Vote progress event (no values leaked)

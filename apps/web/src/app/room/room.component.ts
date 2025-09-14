@@ -30,6 +30,7 @@ import { UiCheckboxDirective } from '../ui/checkbox.directive';
 import { UiCardComponent } from '../ui/card/card.component';
 import { UiFocusTrapDirective } from '../ui/focus-trap.directive';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { ManageDecksComponent } from './manage-decks/manage-decks.component';
 import { I18nService } from '../i18n/i18n.service';
 
 @Component({
@@ -46,6 +47,7 @@ import { I18nService } from '../i18n/i18n.service';
     UiCardComponent,
     UiFocusTrapDirective,
     TranslocoPipe,
+    ManageDecksComponent,
   ],
   templateUrl: './room.component.html',
   styleUrls: ['./room.component.css'],
@@ -74,6 +76,7 @@ export class RoomComponent implements OnDestroy {
   storyTitleModel = '';
   storyNotesModel = '';
   deckId = signal<DeckId>('fibonacci');
+  customDecks = signal<NonNullable<Room['customDecks']>>([]);
   votes = signal<Record<string, string>>({});
   // FR-009 results stats
   stats = signal<VoteStats | null>(null);
@@ -83,6 +86,7 @@ export class RoomComponent implements OnDestroy {
   votedIds = signal<string[]>([]);
   // Join modal visibility
   showJoinModal = signal(false);
+  showManageDecks = signal(false);
 
   private socket?: Socket;
   private socketId = signal<string>('');
@@ -199,6 +203,7 @@ export class RoomComponent implements OnDestroy {
       this.storyTitleModel = room.story?.title ?? '';
       this.storyNotesModel = room.story?.notes ?? '';
       const prevDeck = this.deckId();
+      this.customDecks.set(room.customDecks ?? []);
       const nextDeck: DeckId = (room.deckId ?? 'fibonacci') as DeckId;
       this.deckId.set(nextDeck);
       // Clear local selection if deck changed so UI doesn't show a stale highlight
@@ -364,6 +369,9 @@ export class RoomComponent implements OnDestroy {
   deckValues() {
     const d = this.deckId();
     if (d === 'tshirt') return RoomComponent.TSHIRT;
+    // If a custom deck is active, return its values
+    const custom = this.customDecks().find((cd) => cd.id === d);
+    if (custom) return custom.values ?? [];
     // Default to Fibonacci if unknown deck id
     return RoomComponent.FIBONACCI;
   }
@@ -373,6 +381,33 @@ export class RoomComponent implements OnDestroy {
     if (this.myRole() !== 'host') return;
     const socket = this.connect();
     socket.emit('deck:set', { deckId });
+  }
+
+  openManageDecks() {
+    if (this.myRole() !== 'host') return;
+    this.showManageDecks.set(true);
+  }
+  closeManageDecks() {
+    this.showManageDecks.set(false);
+  }
+
+  // ---- Manage Decks (host-only helpers) ----
+  saveCustomDeck(deck: { id: string; name: string; values: string[] }) {
+    if (this.myRole() !== 'host') return;
+    const id = (deck?.id ?? '').toString().trim();
+    const name = (deck?.name ?? '').toString().trim();
+    const values = Array.isArray(deck?.values) ? deck.values.map((v) => (v ?? '').toString().trim()).filter((v) => !!v) : [];
+    if (!id || !name || values.length === 0) return;
+    const socket = this.connect();
+    socket.emit('deck:upsert', { deck: { id, name, values } });
+  }
+
+  deleteCustomDeck(deckId: string) {
+    if (this.myRole() !== 'host') return;
+    const id = (deckId ?? '').toString().trim();
+    if (!id) return;
+    const socket = this.connect();
+    socket.emit('deck:delete', { deckId: id });
   }
 
   private buildShareUrl(role: 'observer' | 'player'): string {

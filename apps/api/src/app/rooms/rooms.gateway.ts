@@ -22,6 +22,8 @@ import type {
   StorySetPayload,
   DeckSetPayload,
   VoteProgressEvent,
+  DeckUpsertPayload,
+  DeckDeletePayload,
 } from '@scrum-poker/shared-types';
 import type { Story } from '@scrum-poker/shared-types';
 import type { Request, Response } from 'express';
@@ -76,6 +78,22 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
       })
       .strict(),
     deckSet: z
+      .object({
+        deckId: z.string().trim().min(1),
+      })
+      .strict(),
+    deckUpsert: z
+      .object({
+        deck: z
+          .object({
+            id: z.string().trim().min(1),
+            name: z.string().trim().min(1).max(40),
+            values: z.array(z.string().trim().min(1).max(8)).min(1).max(50),
+          })
+          .strict(),
+      })
+      .strict(),
+    deckDelete: z
       .object({
         deckId: z.string().trim().min(1),
       })
@@ -497,6 +515,55 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     this.broadcastProgress(roomId, after);
     const ms = stop({ roomId, deck: deckId });
     this.logEvent({ event: 'deck_set', room_id: roomId, socket_id: client.id, deck: deckId }, client, ms);
+  }
+
+  @SubscribeMessage('deck:upsert')
+  async handleDeckUpsert(
+    @MessageBody() payload: DeckUpsertPayload,
+    @ConnectedSocket() client: Socket
+  ) {
+    const stop = this.perf.start('ws_handler.deck_upsert');
+    if (!this.validate(this.schemas.deckUpsert, payload, client)) return;
+    const ctx = await this.getContext(client);
+    if (!ctx) return;
+    const { roomId, me } = ctx;
+    if (!this.isHost(me)) {
+      const err: RoomErrorEvent = { code: 'forbidden', message: 'Only host can manage decks' };
+      client.emit('room:error', err);
+      this.logEvent({ event: 'auth_forbidden', action: 'deck:upsert', room_id: roomId, socket_id: client.id, role: me.role }, client);
+      return;
+    }
+    try {
+      const after = await this.rooms.upsertCustomDeck(roomId, payload.deck);
+      this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(after));
+      const ms = stop({ roomId });
+      this.logEvent({ event: 'deck_upsert', room_id: roomId, socket_id: client.id }, client, ms);
+    } catch {
+      const err: RoomErrorEvent = { code: 'invalid_payload', message: 'Invalid deck' };
+      client.emit('room:error', err);
+    }
+  }
+
+  @SubscribeMessage('deck:delete')
+  async handleDeckDelete(
+    @MessageBody() payload: DeckDeletePayload,
+    @ConnectedSocket() client: Socket
+  ) {
+    const stop = this.perf.start('ws_handler.deck_delete');
+    if (!this.validate(this.schemas.deckDelete, payload, client)) return;
+    const ctx = await this.getContext(client);
+    if (!ctx) return;
+    const { roomId, me } = ctx;
+    if (!this.isHost(me)) {
+      const err: RoomErrorEvent = { code: 'forbidden', message: 'Only host can manage decks' };
+      client.emit('room:error', err);
+      this.logEvent({ event: 'auth_forbidden', action: 'deck:delete', room_id: roomId, socket_id: client.id, role: me.role }, client);
+      return;
+    }
+    const after = await this.rooms.deleteCustomDeck(roomId, payload.deckId);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(after));
+    const ms = stop({ roomId });
+    this.logEvent({ event: 'deck_delete', room_id: roomId, socket_id: client.id }, client, ms);
   }
 
   // Track connected socket counts to gauge concurrency

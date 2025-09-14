@@ -1,0 +1,53 @@
+@if (open) {
+  <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="mdTitle" appUiFocusTrap>
+    <div class="modal">
+      <app-ui-card class="block">
+        <div class="flex items-center justify-between">
+          <h3 id="mdTitle" class="text-base font-semibold text-slate-900">Manage Decks</h3>
+          <button type="button" appUiButton variant="secondary" (click)="dismiss.emit()">Close</button>
+        </div>
+
+        <div class="mt-4">
+          <h4 class="text-sm font-medium text-slate-800">Create / Edit</h4>
+          <div class="mt-2 grid grid-cols-1 gap-3">
+            <div>
+              <label for="deckId" class="block text-sm text-slate-700">Deck ID</label>
+              <input id="deckId" appUiInput [(ngModel)]="modelId" placeholder="e.g. half" />
+            </div>
+            <div>
+              <label for="deckName" class="block text-sm text-slate-700">Name</label>
+              <input id="deckName" appUiInput [(ngModel)]="modelName" placeholder="e.g. Half Steps" />
+            </div>
+            <div>
+              <label for="deckValues" class="block text-sm text-slate-700">Values (one per line)</label>
+              <textarea id="deckValues" appUiInput rows="6" [(ngModel)]="valuesTextarea" placeholder="0.5\n1\n1.5\n2"></textarea>
+              <p class="help text-xs text-slate-500 mt-1">1–50 values; each up to 8 characters.</p>
+            </div>
+            <div class="flex justify-end">
+              <button id="saveDeckBtn" appUiButton (click)="save()" [disabled]="!modelId.trim() || !modelName.trim() || !valuesTextarea.trim()">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <h4 class="text-sm font-medium text-slate-800">Existing</h4>
+          @if (decks.length === 0) {
+            <p class="text-xs text-slate-500 mt-1">No custom decks yet.</p>
+          } @else {
+            <ul class="mt-2 space-y-2">
+              @for (d of decks; track d.id) {
+                <li class="flex items-center justify-between text-sm">
+                  <div class="min-w-0">
+                    <span class="font-medium">{{ d.name }}</span>
+                    <span class="text-slate-500">({{ d.id }})</span>
+                  </div>
+                  <button class="deleteDeckBtn" appUiButton variant="secondary" size="sm" (click)="deleteDeck(d.id)">Delete</button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </app-ui-card>
+    </div>
+  </div>
+}

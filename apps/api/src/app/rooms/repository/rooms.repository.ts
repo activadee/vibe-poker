@@ -1,4 +1,4 @@
-import type { DeckId, Participant, Room, Story } from '@scrum-poker/shared-types';
+import type { CustomDeck, DeckId, Participant, Room, Story } from '@scrum-poker/shared-types';
 import type { RoomsBackend } from './tokens';
 
 export interface RoomsRepository {
@@ -19,4 +19,6 @@ export interface RoomsRepository {
   setRevealed(roomId: string, revealed: boolean): Promise<Room>;
   setStory(roomId: string, story: Story | undefined): Promise<Room>;
   setDeck(roomId: string, deckId: DeckId): Promise<Room>;
+  upsertCustomDeck(roomId: string, deck: CustomDeck): Promise<Room>;
+  deleteCustomDeck(roomId: string, deckId: string): Promise<Room>;
 }

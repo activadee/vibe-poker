@@ -25,6 +25,8 @@ export interface Story {
   notes?: string;
 }
 
+export type CustomDeck = { id: string; name: string; values: string[] };
+
 export interface Room {
   id: string;
   createdAt: number; // epoch ms
@@ -33,6 +35,8 @@ export interface Room {
   // Optional voting state
   story?: Story;
   deckId?: DeckId;
+  // Room-owned custom decks
+  customDecks?: CustomDeck[];
   revealed?: boolean;
   // votes keyed by participant id; values are card identifiers
   votes?: Record<string, string>;

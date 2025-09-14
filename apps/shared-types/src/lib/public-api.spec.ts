@@ -13,6 +13,9 @@ import type {
   StorySetPayload,
   DeckSetPayload,
   VoteProgressEvent,
+  CustomDeck,
+  DeckUpsertPayload,
+  DeckDeletePayload,
 } from '../index';
 
 // This spec ensures the public API surface remains stable by
@@ -56,8 +59,12 @@ describe('shared-types public API', () => {
     const reveal: VoteRevealPayload = {};
     const story: StorySetPayload = { story: { id: 'S-1', title: 'Implement feature', notes: 'Acceptance & dev notes' } };
     const deck: DeckSetPayload = { deckId: 'fibonacci' };
+    // Custom deck contracts
+    const custom: CustomDeck = { id: 'half', name: 'Half Steps', values: ['0.5', '1', '1.5'] };
+    const upsert: DeckUpsertPayload = { deck: custom };
+    const del: DeckDeletePayload = { deckId: 'half' };
     const progress: VoteProgressEvent = { count: 1, total: 3, votedIds: ['1'] };
-    void join; void err; void cast; void reset; void reveal; void story; void deck; void progress;
+    void join; void err; void cast; void reset; void reveal; void story; void deck; void custom; void upsert; void del; void progress;
 
     expect(true).toBe(true);
   });
