@@ -144,7 +144,11 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
         const { createAdapter } = require('@socket.io/redis-adapter');
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const Redis = require('ioredis');
-        const pub = new Redis(process.env.REDIS_URL);
+        const username = (process.env.REDIS_USERNAME || '').trim() || undefined;
+        const password = (process.env.REDIS_PASSWORD || '').trim() || undefined;
+        const pub = username || password
+          ? new Redis(process.env.REDIS_URL, { username, password })
+          : new Redis(process.env.REDIS_URL);
         const sub = pub.duplicate();
         server.adapter(createAdapter(pub, sub));
         this.logging.event('socketio_redis_adapter_enabled');

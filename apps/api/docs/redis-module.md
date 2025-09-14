@@ -11,6 +11,7 @@ This workspace provides a reusable Nx library `@scrum-poker/redis` exposing a Ne
 
 - `ROOMS_BACKEND`: `redis` to enable; otherwise defaults to `memory`.
 - `REDIS_URL`: Connection string like `redis://host:6379`.
+- `REDIS_USERNAME`, `REDIS_PASSWORD`: Optional ACL credentials sent to Redis when provided.
 
 ## Lifecycle
 

@@ -1,7 +1,14 @@
 /**
  * Redis library tests (TDD)
+ * Mock ioredis with a jest.fn that wraps ioredis-mock to capture constructor args
  */
-jest.mock('ioredis', () => require('ioredis-mock'));
+jest.mock('ioredis', () => {
+  const Real = require('ioredis-mock');
+  return jest.fn(function (this: unknown, ...args: unknown[]) {
+    // @ts-ignore - construct ioredis-mock with same args
+    return new Real(...args);
+  });
+});
 
 import { Test } from '@nestjs/testing';
 import type Redis from 'ioredis';
@@ -25,6 +32,7 @@ describe('@scrum-poker/redis', () => {
 
   it('creates a singleton Redis client when backend is redis', async () => {
     process.env.ROOMS_BACKEND = 'redis';
+    process.env.ALLOW_REDIS_IN_TEST = 'true';
     process.env.REDIS_URL = 'redis://localhost:6379';
     const moduleRef = await Test.createTestingModule({
       imports: [RedisModule.forRoot()],
@@ -38,5 +46,27 @@ describe('@scrum-poker/redis', () => {
     expect(v).toBe('v');
     await moduleRef.close();
   });
-});
 
+  it('passes REDIS_USERNAME and REDIS_PASSWORD to the client when provided', async () => {
+    const RedisCtor = require('ioredis') as jest.Mock;
+    RedisCtor.mockClear();
+    process.env.ROOMS_BACKEND = 'redis';
+    process.env.ALLOW_REDIS_IN_TEST = 'true';
+    process.env.REDIS_URL = 'redis://localhost:6379';
+    process.env.REDIS_USERNAME = 'default';
+    process.env.REDIS_PASSWORD = 's3cr3t';
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [RedisModule.forRoot()],
+    }).compile();
+    // touch client to ensure construction
+    const client = moduleRef.get<Redis | null>(REDIS_CLIENT);
+    expect(client).toBeTruthy();
+    // Verify constructor was called with URL and options containing credentials
+    expect(RedisCtor).toHaveBeenCalled();
+    const call = RedisCtor.mock.calls[0];
+    expect(call[0]).toBe('redis://localhost:6379');
+    expect(call[1]).toEqual(expect.objectContaining({ username: 'default', password: 's3cr3t' }));
+    await moduleRef.close();
+  });
+});

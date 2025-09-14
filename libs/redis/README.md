@@ -13,7 +13,11 @@ Nx library that provides a Redis client module for NestJS apps.
 - Otherwise the provider resolves to `null`.
 - On Nest shutdown the client is gracefully quit.
 
+### Authentication
+
+- Optional envs: `REDIS_USERNAME`, `REDIS_PASSWORD`.
+- If set, they are passed to the ioredis constructor along with `REDIS_URL`.
+
 ## Tests
 
 Unit tests use `ioredis-mock` and verify both memory-default and redis modes.
-

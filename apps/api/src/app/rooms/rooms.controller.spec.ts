@@ -5,12 +5,19 @@ import { RoomsController } from './rooms.controller';
 
 describe('RoomsController (unit)', () => {
   let controller: RoomsController;
+  const prevBackend = process.env.ROOMS_BACKEND;
 
   beforeAll(async () => {
+    process.env.ROOMS_BACKEND = 'memory';
     const moduleRef = await Test.createTestingModule({
       imports: [RoomsModule],
     }).compile();
     controller = moduleRef.get(RoomsController);
+  });
+
+  afterAll(() => {
+    if (prevBackend === undefined) delete process.env.ROOMS_BACKEND;
+    else process.env.ROOMS_BACKEND = prevBackend;
   });
 
   it('create() returns human-readable id', async () => {
