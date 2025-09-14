@@ -247,10 +247,18 @@
           } @else {
             <button appUiButton (click)="revote()">{{ 'room.host.revote' | transloco }}</button>
           }
+          <button appUiButton variant="secondary" (click)="openManageDecks()">{{ 'room.host.manage' | transloco }}</button>
         </div>
       </app-ui-card>
       }
     </div>
   </section>
   }
+  <app-manage-decks
+    [open]="showManageDecks()"
+    [decks]="customDecks()"
+    (dismiss)="closeManageDecks()"
+    (upsert)="saveCustomDeck($event)"
+    (del)="deleteCustomDeck($event)"
+  />
 </div>

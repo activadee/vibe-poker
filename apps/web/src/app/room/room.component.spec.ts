@@ -668,14 +668,30 @@ describe('RoomComponent (Custom Decks)', () => {
     } as any;
     comp.socket = fakeSocket;
 
-    // Save a deck
-    comp.saveCustomDeck({ id: 'half', name: 'Half Steps', values: ['0.5','1','1.5'] });
-    expect(fakeSocket.emit).toHaveBeenCalledWith('deck:upsert', {
-      deck: { id: 'half', name: 'Half Steps', values: ['0.5','1','1.5'] },
-    });
+    // Open modal and use its UI to save/delete
+    comp.openManageDecks();
+    fixture.detectChanges();
 
-    // Delete a deck
-    comp.deleteCustomDeck('half');
+    const html = fixture.nativeElement as HTMLElement;
+    // Fill in id, name, values
+    (html.querySelector('#deckId') as HTMLInputElement).value = 'half';
+    (html.querySelector('#deckId') as HTMLInputElement).dispatchEvent(new Event('input'));
+    (html.querySelector('#deckName') as HTMLInputElement).value = 'Half Steps';
+    (html.querySelector('#deckName') as HTMLInputElement).dispatchEvent(new Event('input'));
+    (html.querySelector('#deckValues') as HTMLTextAreaElement).value = '0.5\n1\n1.5';
+    (html.querySelector('#deckValues') as HTMLTextAreaElement).dispatchEvent(new Event('input'));
+
+    // Click Save
+    fixture.detectChanges();
+    (html.querySelector('#saveDeckBtn') as HTMLButtonElement).click();
+    expect(fakeSocket.emit).toHaveBeenCalledWith('deck:upsert', { deck: { id: 'half', name: 'Half Steps', values: ['0.5','1','1.5'] } });
+
+    // Re-open and delete from list
+    comp.showManageDecks.set(true);
+    comp.customDecks.set([{ id: 'half', name: 'Half Steps', values: ['0.5','1','1.5'] }]);
+    fixture.detectChanges();
+    const delBtn = html.querySelector('.deleteDeckBtn') as HTMLButtonElement;
+    delBtn.click();
     expect(fakeSocket.emit).toHaveBeenCalledWith('deck:delete', { deckId: 'half' });
   });
 

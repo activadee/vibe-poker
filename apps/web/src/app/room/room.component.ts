@@ -30,6 +30,7 @@ import { UiCheckboxDirective } from '../ui/checkbox.directive';
 import { UiCardComponent } from '../ui/card/card.component';
 import { UiFocusTrapDirective } from '../ui/focus-trap.directive';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { ManageDecksComponent } from './manage-decks/manage-decks.component';
 import { I18nService } from '../i18n/i18n.service';
 
 @Component({
@@ -46,6 +47,7 @@ import { I18nService } from '../i18n/i18n.service';
     UiCardComponent,
     UiFocusTrapDirective,
     TranslocoPipe,
+    ManageDecksComponent,
   ],
   templateUrl: './room.component.html',
   styleUrls: ['./room.component.css'],
@@ -84,6 +86,7 @@ export class RoomComponent implements OnDestroy {
   votedIds = signal<string[]>([]);
   // Join modal visibility
   showJoinModal = signal(false);
+  showManageDecks = signal(false);
 
   private socket?: Socket;
   private socketId = signal<string>('');
@@ -378,6 +381,14 @@ export class RoomComponent implements OnDestroy {
     if (this.myRole() !== 'host') return;
     const socket = this.connect();
     socket.emit('deck:set', { deckId });
+  }
+
+  openManageDecks() {
+    if (this.myRole() !== 'host') return;
+    this.showManageDecks.set(true);
+  }
+  closeManageDecks() {
+    this.showManageDecks.set(false);
   }
 
   // ---- Manage Decks (host-only helpers) ----

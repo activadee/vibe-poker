@@ -48,7 +48,8 @@
         "fibonacci": "Fibonacci",
         "tshirt": "T‑Shirt sizes"
       },
-      "deckPreset": "Deck Preset",
+      "deckPreset": "Deck",
+      "manage": "Manage Decks",
       "reset": "Reset",
       "reveal": "Reveal",
       "revote": "Revote",
