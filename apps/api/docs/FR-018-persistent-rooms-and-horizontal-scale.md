@@ -29,11 +29,10 @@ Note: The model favors simplicity and atomicity over fine-grained structures; it
 
 When `ROOMS_BACKEND=redis` and `REDIS_URL` are set, the gateway enables the Redis adapter:
 
-```ts
-const pub = new Redis(process.env.REDIS_URL!);
+// Prefer DI: inject REDIS_CLIENT and duplicate it
+const pub = injectedRedisClient; // from DI
 const sub = pub.duplicate();
 io.adapter(createAdapter(pub, sub));
-```
 
 This preserves current CORS and rate limit behavior and makes `server.to(roomId).emit(...)` reach clients connected to any instance.
 

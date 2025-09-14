@@ -372,9 +372,9 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     const value = (payload?.value ?? '').toString();
     if (!value) return; // ignore invalid
     // Persist via service (overwrites if re-cast)
-    await this.rooms.castVote(roomId, client.id, value);
+    const after = await this.rooms.castVote(roomId, client.id, value);
     // Broadcast progress only (no values) to all clients
-    this.broadcastProgress(roomId, room);
+    this.broadcastProgress(roomId, after);
     const ms = stop({ roomId });
     this.logEvent({ event: 'vote_cast', room_id: roomId, socket_id: client.id }, client, ms);
   }
