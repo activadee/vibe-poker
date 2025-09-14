@@ -150,6 +150,10 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
           ? new Redis(process.env.REDIS_URL, { username, password })
           : new Redis(process.env.REDIS_URL);
         const sub = pub.duplicate();
+        pub.on('error', (err: unknown) => this.logger.error(`Redis(pub) error: ${String((err as any)?.message ?? err)}`));
+        sub.on('error', (err: unknown) => this.logger.error(`Redis(sub) error: ${String((err as any)?.message ?? err)}`));
+        pub.on('ready', () => this.logger.log('Redis(pub) ready for Socket.IO adapter'));
+        sub.on('ready', () => this.logger.log('Redis(sub) ready for Socket.IO adapter'));
         server.adapter(createAdapter(pub, sub));
         this.logging.event('socketio_redis_adapter_enabled');
       }
