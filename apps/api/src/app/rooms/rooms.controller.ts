@@ -15,7 +15,7 @@ export class RoomsController {
   ) {}
 
   @Post()
-  create(@Body() body: CreateRoomRequest, @Req() req: Request): CreateRoomResponse {
+  async create(@Body() body: CreateRoomRequest, @Req() req: Request): Promise<CreateRoomResponse> {
     const stop = this.perf.start('http.rooms_create');
     const hostName = body?.hostName?.trim();
     if (!hostName) {
@@ -27,7 +27,7 @@ export class RoomsController {
       r.session.uid = crypto.randomUUID();
     }
     const ownerSid = r.session?.uid ?? crypto.randomUUID();
-    const room = this.rooms.create(hostName, ownerSid);
+    const room = await this.rooms.create(hostName, ownerSid);
     const latencyMs = stop({ id: room.id });
     const correlationId =
       this.logging.getCorrelationId?.() ||

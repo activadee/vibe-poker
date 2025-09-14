@@ -25,11 +25,10 @@ describe('RoomsController logging', () => {
     controller = moduleRef.get(RoomsController);
   });
 
-  it('logs room_create with correlation and latency', () => {
-    rooms.create.mockReturnValue({ id: 'ROOM1', createdAt: Date.now(), expiresAt: Date.now() + 1, participants: [] });
+  it('logs room_create with correlation and latency', async () => {
+    rooms.create.mockResolvedValue({ id: 'ROOM1', createdAt: Date.now(), expiresAt: Date.now() + 1, participants: [] });
     const req: any = { headers: { 'x-correlation-id': 'CID-HTTP-1' }, session: {} };
-
-    const res = controller.create({ hostName: 'Alice' } as any, req);
+    const res = await controller.create({ hostName: 'Alice' } as any, req);
     expect(res.id).toBe('ROOM1');
     expect(logging.event).toHaveBeenCalled();
     const call = logging.event.mock.calls.find((c) => c[0] === 'room_create');

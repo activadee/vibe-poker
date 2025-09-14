@@ -1,0 +1,28 @@
+{
+  "name": "redis",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/redis/src",
+  "projectType": "library",
+  "tags": ["nest", "infra"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/redis",
+        "main": "libs/redis/src/index.ts",
+        "tsConfig": "libs/redis/tsconfig.lib.json",
+        "assets": ["libs/redis/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/redis/jest.config.ts",
+        "passWithNoTests": false
+      }
+    }
+  }
+}
+

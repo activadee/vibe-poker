@@ -55,11 +55,11 @@ describe('RoomsGateway', () => {
     gateway.server = { to };
   });
 
-  it('handleJoin adds participant and broadcasts state', () => {
+  it('handleJoin adds participant and broadcasts state', async () => {
     const room = makeRoom('ROOM1');
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
     const updated: Room = { ...room, participants: [{ id: 's1', name: 'Alice', role: 'player' as const }] };
-    rooms.addParticipant.mockReturnValue(updated);
+    rooms.addParticipant.mockResolvedValue(updated);
     rooms.computeProgress.mockImplementation((r: Room) => {
       const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
       const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
@@ -68,7 +68,7 @@ describe('RoomsGateway', () => {
 
     const client: any = { id: 's1', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'owner-1' } } };
 
-    gateway.handleJoin({ roomId: 'ROOM1', name: 'Alice' }, client);
+    await gateway.handleJoin({ roomId: 'ROOM1', name: 'Alice' }, client);
 
     expect(client.join).toHaveBeenCalledWith('room:ROOM1');
     expect(rooms.addParticipant).toHaveBeenCalledWith('ROOM1', {
@@ -83,11 +83,11 @@ describe('RoomsGateway', () => {
     expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 1, votedIds: [] });
   });
 
-  it('handleJoin honors requested observer role (not counted in progress)', () => {
+  it('handleJoin honors requested observer role (not counted in progress)', async () => {
     const room = makeRoom('ROOMOBS');
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
     const updated: Room = { ...room, participants: [{ id: 'o1', name: 'Olivia', role: 'observer' as const }] };
-    rooms.addParticipant.mockReturnValue(updated);
+    rooms.addParticipant.mockResolvedValue(updated);
     rooms.computeProgress.mockImplementation((r: Room) => {
       const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
       const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
@@ -95,18 +95,18 @@ describe('RoomsGateway', () => {
     });
 
     const client: any = { id: 'o1', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'owner-2' } } };
-    gateway.handleJoin({ roomId: 'ROOMOBS', name: 'Olivia', role: 'observer' } as any, client);
+    await gateway.handleJoin({ roomId: 'ROOMOBS', name: 'Olivia', role: 'observer' } as any, client);
 
     expect(rooms.addParticipant).toHaveBeenCalledWith('ROOMOBS', { id: 'o1', name: 'Olivia', role: 'observer' });
     // Progress excludes observers
     expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 0, votedIds: [] });
   });
 
-  it('handleJoin emits error when room missing', () => {
-    rooms.get.mockReturnValue(undefined as any);
+  it('handleJoin emits error when room missing', async () => {
+    rooms.get.mockResolvedValue(undefined as any);
     const client: any = { id: 's2', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'x' } } };
 
-    gateway.handleJoin({ roomId: 'MISSING', name: 'Bob' }, client);
+    await gateway.handleJoin({ roomId: 'MISSING', name: 'Bob' }, client);
 
     expect(client.emit).toHaveBeenCalledWith(
       'room:error',
@@ -116,13 +116,13 @@ describe('RoomsGateway', () => {
     expect(rooms.addParticipant).not.toHaveBeenCalled();
   });
 
-  it('handleJoin emits expired error when room TTL passed', () => {
+  it('handleJoin emits expired error when room TTL passed', async () => {
     const expiredRoom = makeRoom('OLD1');
     expiredRoom.expiresAt = Date.now() - 1000;
-    rooms.get.mockReturnValue(expiredRoom);
+    rooms.get.mockResolvedValue(expiredRoom);
     const client: any = { id: 's9', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'x' } } };
 
-    gateway.handleJoin({ roomId: 'OLD1', name: 'Zoe' }, client);
+    await gateway.handleJoin({ roomId: 'OLD1', name: 'Zoe' }, client);
 
     expect(rooms.remove).toHaveBeenCalledWith('OLD1');
     expect(client.emit).toHaveBeenCalledWith(
@@ -133,30 +133,30 @@ describe('RoomsGateway', () => {
     expect(rooms.addParticipant).not.toHaveBeenCalled();
   });
 
-  it('handleJoin emits error when payload invalid', () => {
+  it('handleJoin emits error when payload invalid', async () => {
     const client: any = { id: 's3', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'x' } } };
-    gateway.handleJoin({ roomId: '', name: '' } as any, client);
+    await gateway.handleJoin({ roomId: '', name: '' } as any, client);
     expect(client.emit).toHaveBeenCalledWith(
       'room:error',
       expect.objectContaining({ code: 'invalid_payload' })
     );
   });
 
-  it('handleDisconnect removes participant and broadcasts', () => {
+  it('handleDisconnect removes participant and broadcasts', async () => {
     // First join to map socket to room
     const room = makeRoom('ROOMX');
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
     const afterJoin: Room = { ...room, participants: [{ id: 'sock', name: 'Eve', role: 'player' as const }] };
-    rooms.addParticipant.mockReturnValue(afterJoin);
+    rooms.addParticipant.mockResolvedValue(afterJoin);
 
     const client: any = { id: 'sock', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'x' } } };
-    gateway.handleJoin({ roomId: 'ROOMX', name: 'Eve' }, client);
+    await gateway.handleJoin({ roomId: 'ROOMX', name: 'Eve' }, client);
 
     // Now disconnect
     const afterRemove = { ...room, participants: [] };
-    rooms.removeParticipant.mockReturnValue(afterRemove);
+    rooms.removeParticipant.mockResolvedValue(afterRemove);
 
-    gateway.handleDisconnect(client);
+    await gateway.handleDisconnect(client);
 
     expect(rooms.removeParticipant).toHaveBeenCalledWith('ROOMX', 'sock');
     const toMock = (gateway as any).server.to as jest.Mock;
@@ -165,25 +165,25 @@ describe('RoomsGateway', () => {
     expect(toEmit).toHaveBeenCalledWith('room:state', afterRemove);
   });
 
-  it('handleDisconnect does nothing if no room mapping', () => {
+  it('handleDisconnect does nothing if no room mapping', async () => {
     const client: any = { id: 'unknown', join: jest.fn(), emit: jest.fn() };
-    gateway.handleDisconnect(client);
+    await gateway.handleDisconnect(client);
     expect(rooms.removeParticipant).not.toHaveBeenCalled();
     const toMock = (gateway as any).server.to as jest.Mock;
     expect(toMock).not.toHaveBeenCalled();
   });
 
-  it('host disconnect does not insert placeholder (ownership via session)', () => {
+  it('host disconnect does not insert placeholder (ownership via session)', async () => {
     const room = makeRoom('ROOMH');
     room.participants = [
       { id: 'host-sock', name: 'Hannah', role: 'host' },
     ];
-    rooms.get.mockReturnValue(room);
-    rooms.removeParticipant.mockImplementation((_roomId: string, pid: string) => {
+    rooms.get.mockResolvedValue(room);
+    rooms.removeParticipant.mockImplementation(async (_roomId: string, pid: string) => {
       room.participants = room.participants.filter((p) => p.id !== pid);
       return room;
     });
-    rooms.addParticipant.mockImplementation((_roomId: string, p: any) => {
+    rooms.addParticipant.mockImplementation(async (_roomId: string, p: any) => {
       // mimic service behavior of replacing host entries
       room.participants = room.participants.filter((x) => x.role !== 'host');
       room.participants.push(p);
@@ -193,24 +193,24 @@ describe('RoomsGateway', () => {
     const client: any = { id: 'host-sock', join: jest.fn(), emit: jest.fn() };
     // Map socket to room and disconnect
     (gateway as any).socketRoom.set('host-sock', 'ROOMH');
-    gateway.handleDisconnect(client);
+    await gateway.handleDisconnect(client);
 
     expect(rooms.removeParticipant).toHaveBeenCalledWith('ROOMH', 'host-sock');
     // No placeholder host reinsertion in session-owned model
     expect(rooms.addParticipant).not.toHaveBeenCalledWith('ROOMH', expect.objectContaining({ role: 'host' }));
   });
 
-  it('observer cannot cast vote', () => {
+  it('observer cannot cast vote', async () => {
     const room = makeRoom('ROOM1');
     room.participants = [
       { id: 'obs', name: 'Olivia', role: 'observer' },
     ];
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
     const client: any = { id: 'obs', join: jest.fn(), emit: jest.fn() };
     // Map socket to room without going through join (role would be player otherwise)
     (gateway as any).socketRoom.set('obs', 'ROOM1');
 
-    gateway.handleVoteCast({ value: '5' } as any, client);
+    await gateway.handleVoteCast({ value: '5' } as any, client);
 
     // Should emit forbidden error and not broadcast state
     expect(client.emit).toHaveBeenCalledWith(
@@ -221,16 +221,16 @@ describe('RoomsGateway', () => {
     expect(toMock).not.toHaveBeenCalledWith('room:ROOM1');
   });
 
-  it('non-host cannot reveal', () => {
+  it('non-host cannot reveal', async () => {
     const room = makeRoom('ROOMX');
     room.participants = [
       { id: 'p1', name: 'Paula', role: 'player' },
     ];
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
     const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
     (gateway as any).socketRoom.set('p1', 'ROOMX');
 
-    gateway.handleVoteReveal({} as any, client);
+    await gateway.handleVoteReveal({} as any, client);
 
     expect(client.emit).toHaveBeenCalledWith(
       'room:error',
@@ -240,14 +240,14 @@ describe('RoomsGateway', () => {
     expect(toMock).not.toHaveBeenCalledWith('room:ROOMX');
   });
 
-  it('broadcasts vote progress on cast without leaking room:state', () => {
+  it('broadcasts vote progress on cast without leaking room:state', async () => {
     const room = makeRoom('ROOM1');
     room.participants = [
       { id: 'p1', name: 'Alice', role: 'player' },
       { id: 'obs', name: 'Olivia', role: 'observer' },
     ];
-    rooms.get.mockReturnValue(room);
-    rooms.castVote.mockImplementation((roomId: string, pid: string, v: string) => {
+    rooms.get.mockResolvedValue(room);
+    rooms.castVote.mockImplementation(async (roomId: string, pid: string, v: string) => {
       if (room.id !== roomId) throw new Error('wrong room');
       room.votes = room.votes ?? {};
       room.votes[pid] = v;
@@ -263,7 +263,7 @@ describe('RoomsGateway', () => {
     (gateway as any).socketRoom.set('p1', 'ROOM1');
     const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
 
-    gateway.handleVoteCast({ value: '5' } as any, client);
+    await gateway.handleVoteCast({ value: '5' } as any, client);
 
     // Should broadcast only progress with 1/1 (only players counted)
     expect(toEmit).toHaveBeenCalledWith('vote:progress', {
@@ -275,7 +275,7 @@ describe('RoomsGateway', () => {
     expect(toEmit.mock.calls.some((c: any[]) => c[0] === 'room:state')).toBe(false);
   });
 
-  it('room:state omits votes/stats before reveal and includes votes + stats after reveal', () => {
+  it('room:state omits votes/stats before reveal and includes votes + stats after reveal', async () => {
     const room = makeRoom('ROOMZ');
     room.participants = [
       { id: 'h1', name: 'Hannah', role: 'host' },
@@ -283,10 +283,10 @@ describe('RoomsGateway', () => {
     ];
     room.votes = { p1: '5', h1: '8' } as any;
     room.revealed = false;
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
     rooms.computeProgress.mockReturnValue({ count: 0, total: 2, votedIds: [] });
-    rooms.castVote.mockImplementation(() => room);
-    rooms.addParticipant.mockImplementation((_id: string, _p: any) => room);
+    rooms.castVote.mockImplementation(async () => room);
+    rooms.addParticipant.mockImplementation(async (_id: string, _p: any) => room);
     rooms.computeStats = jest.fn().mockImplementation((r: Room) => {
       const nums = Object.values(r.votes ?? {})
         .map((v) => Number(v))
@@ -304,21 +304,23 @@ describe('RoomsGateway', () => {
     const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
 
     // Trigger a state broadcast via story:set (host-only)
-    gateway.handleStorySet({ story: { id: 'S-x', title: 'XYZ' } } as any, host);
+    rooms.setStory = jest.fn().mockResolvedValue(room) as any;
+    await gateway.handleStorySet({ story: { id: 'S-x', title: 'XYZ' } } as any, host);
     const stateBefore = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
     expect(stateBefore).toBeDefined();
     expect('votes' in stateBefore).toBe(false);
     expect('stats' in stateBefore).toBe(false);
 
     // Now reveal and expect votes to be present
-    gateway.handleVoteReveal({} as any, host);
+    rooms.setRevealed = jest.fn().mockResolvedValue({ ...room, revealed: true }) as any;
+    await gateway.handleVoteReveal({} as any, host);
     const stateAfter = toEmit.mock.calls.filter((c: any[]) => c[0] === 'room:state').pop()?.[1];
     expect(stateAfter).toBeDefined();
     expect(stateAfter.votes).toEqual(room.votes);
     expect(stateAfter.stats).toEqual({ avg: 6.5, median: 6.5 });
   });
 
-  it('host can reset votes: broadcasts hidden state and 0/Y progress', () => {
+  it('host can reset votes: broadcasts hidden state and 0/Y progress', async () => {
     const room = makeRoom('ROOMR');
     room.participants = [
       { id: 'h1', name: 'Hannah', role: 'host' },
@@ -327,8 +329,8 @@ describe('RoomsGateway', () => {
     room.votes = { p1: '5', h1: '8' } as any;
     room.revealed = true;
 
-    rooms.get.mockReturnValue(room);
-    rooms.reset.mockImplementation((roomId: string) => {
+    rooms.get.mockResolvedValue(room);
+    rooms.reset.mockImplementation(async (roomId: string) => {
       if (roomId !== 'ROOMR') throw new Error('wrong room');
       room.revealed = false;
       room.votes = {} as any;
@@ -346,7 +348,7 @@ describe('RoomsGateway', () => {
     (gateway as any).socketRoom.set('h1', 'ROOMR');
     const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
 
-    gateway.handleVoteReset({} as any, host);
+    await gateway.handleVoteReset({} as any, host);
 
     // Expect state broadcast with hidden votes and revealed=false
     const state = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
@@ -358,16 +360,16 @@ describe('RoomsGateway', () => {
     expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 2, votedIds: [] });
   });
 
-  it('non-host cannot reset', () => {
+  it('non-host cannot reset', async () => {
     const room = makeRoom('ROOMR2');
     room.participants = [
       { id: 'p1', name: 'Paula', role: 'player' },
     ];
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
     (gateway as any).socketRoom.set('p1', 'ROOMR2');
     const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
 
-    gateway.handleVoteReset({} as any, client);
+    await gateway.handleVoteReset({} as any, client);
 
     expect(client.emit).toHaveBeenCalledWith(
       'room:error',
@@ -378,16 +380,16 @@ describe('RoomsGateway', () => {
     expect(toMock).not.toHaveBeenCalledWith('room:ROOMR2');
   });
 
-  it('non-host cannot set story', () => {
+  it('non-host cannot set story', async () => {
     const room = makeRoom('ROOMS');
     room.participants = [
       { id: 'p1', name: 'Paula', role: 'player' },
     ];
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
     (gateway as any).socketRoom.set('p1', 'ROOMS');
     const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
 
-    gateway.handleStorySet({ story: { id: 'S-1', title: 'A' } } as any, client);
+    await gateway.handleStorySet({ story: { id: 'S-1', title: 'A' } } as any, client);
 
     expect(client.emit).toHaveBeenCalledWith(
       'room:error',
@@ -397,37 +399,38 @@ describe('RoomsGateway', () => {
     expect(toMock).not.toHaveBeenCalledWith('room:ROOMS');
   });
 
-  it('story:set validates payload and broadcasts on success', () => {
+  it('story:set validates payload and broadcasts on success', async () => {
     const room = makeRoom('ROOMS2');
     room.participants = [
       { id: 'h1', name: 'Hannah', role: 'host' },
     ];
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
     (gateway as any).socketRoom.set('h1', 'ROOMS2');
     const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
 
     // invalid: empty title
-    gateway.handleStorySet({ story: { id: 'S-1', title: '' } } as any, host);
+    await gateway.handleStorySet({ story: { id: 'S-1', title: '' } } as any, host);
     expect(host.emit).toHaveBeenCalledWith(
       'room:error',
       expect.objectContaining({ code: 'invalid_payload' })
     );
 
     // valid
-    gateway.handleStorySet({ story: { id: 'S-1', title: 'Feature A', notes: 'Some notes' } } as any, host);
+    rooms.setStory = jest.fn().mockResolvedValue({ ...room, story: { id: 'S-1', title: 'Feature A', notes: 'Some notes' } }) as any;
+    await gateway.handleStorySet({ story: { id: 'S-1', title: 'Feature A', notes: 'Some notes' } } as any, host);
     const toMock = (gateway as any).server.to as jest.Mock;
     expect(toMock).toHaveBeenCalledWith('room:ROOMS2');
     const state = toEmit.mock.calls.find((c: any[]) => c[0] === 'room:state')?.[1];
     expect(state.story).toEqual({ id: 'S-1', title: 'Feature A', notes: 'Some notes' });
   });
 
-  it('rate limits per-socket on vote:cast (excess dropped)', () => {
+  it('rate limits per-socket on vote:cast (excess dropped)', async () => {
     const room = makeRoom('ROOMRL1');
     room.participants = [
       { id: 'p1', name: 'Alice', role: 'player' },
     ];
-    rooms.get.mockReturnValue(room);
-    rooms.castVote.mockImplementation((roomId: string, pid: string, v: string) => {
+    rooms.get.mockResolvedValue(room);
+    rooms.castVote.mockImplementation(async (roomId: string, pid: string, v: string) => {
       room.votes = room.votes ?? {};
       room.votes[pid] = v;
       return room;
@@ -444,7 +447,8 @@ describe('RoomsGateway', () => {
 
     // Default limiter allows 5 ops/sec per socket; send 6 quickly
     for (let i = 0; i < 6; i++) {
-      gateway.handleVoteCast({ value: '5' } as any, client);
+      // eslint-disable-next-line no-await-in-loop
+      await gateway.handleVoteCast({ value: '5' } as any, client);
     }
 
     // Only first 5 should reach service
@@ -453,14 +457,14 @@ describe('RoomsGateway', () => {
     expect(client.emit.mock.calls.some((c: any[]) => c[0] === 'room:error' && c[1]?.code === 'rate_limited')).toBe(true);
   });
 
-  it('rate limits per-IP across sockets on vote:cast', () => {
+  it('rate limits per-IP across sockets on vote:cast', async () => {
     const room = makeRoom('ROOMRL2');
     room.participants = [
       { id: 'a', name: 'A', role: 'player' },
       { id: 'b', name: 'B', role: 'player' },
     ];
-    rooms.get.mockReturnValue(room);
-    rooms.castVote.mockImplementation((roomId: string, pid: string, v: string) => {
+    rooms.get.mockResolvedValue(room);
+    rooms.castVote.mockImplementation(async (roomId: string, pid: string, v: string) => {
       room.votes = room.votes ?? {};
       room.votes[pid] = v;
       return room;
@@ -478,26 +482,26 @@ describe('RoomsGateway', () => {
     const B: any = { id: 'b', join: jest.fn(), emit: jest.fn(), handshake: { address: '2.2.2.2' } };
 
     // Per-IP limit default is 8/sec. Do 5 from A, 3 from B (ok so far), then one more from B -> should rate limit
-    for (let i = 0; i < 5; i++) gateway.handleVoteCast({ value: '1' } as any, A);
-    for (let i = 0; i < 3; i++) gateway.handleVoteCast({ value: '1' } as any, B);
-    gateway.handleVoteCast({ value: '1' } as any, B); // 9th -> exceeds IP bucket
+    for (let i = 0; i < 5; i++) await gateway.handleVoteCast({ value: '1' } as any, A);
+    for (let i = 0; i < 3; i++) await gateway.handleVoteCast({ value: '1' } as any, B);
+    await gateway.handleVoteCast({ value: '1' } as any, B); // 9th -> exceeds IP bucket
 
     // Service should have been hit 8 times in total
     expect(rooms.castVote).toHaveBeenCalledTimes(8);
     expect(B.emit.mock.calls.some((c: any[]) => c[0] === 'room:error' && c[1]?.code === 'rate_limited')).toBe(true);
   });
 
-  it('drops oversized payloads with invalid_payload', () => {
+  it('drops oversized payloads with invalid_payload', async () => {
     const room = makeRoom('ROOMBIG');
     room.participants = [
       { id: 'h1', name: 'Hannah', role: 'host' },
     ];
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
     (gateway as any).socketRoom.set('h1', 'ROOMBIG');
     const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn(), handshake: { address: '3.3.3.3' } };
 
     const bigNotes = 'x'.repeat(3000); // > 2KB
-    gateway.handleStorySet({ story: { id: 'S-big', title: 'T', notes: bigNotes } } as any, host);
+    await gateway.handleStorySet({ story: { id: 'S-big', title: 'T', notes: bigNotes } } as any, host);
 
     expect(host.emit).toHaveBeenCalledWith(
       'room:error',
@@ -509,7 +513,7 @@ describe('RoomsGateway', () => {
   });
 
   describe('FR-017 deck:set', () => {
-    it('host can set deck, clears votes, unreveals, and broadcasts progress reset', () => {
+    it('host can set deck, clears votes, unreveals, and broadcasts progress reset', async () => {
       const room = makeRoom('ROOMD');
       room.participants = [
         { id: 'h1', name: 'Hannah', role: 'host' },
@@ -519,14 +523,18 @@ describe('RoomsGateway', () => {
       // Previously revealed with computed stats present
       (room as any).revealed = true;
       (room as any).stats = { avg: 6.5, median: 6.5 } as any;
-      rooms.get.mockReturnValue(room);
-      rooms.reset.mockImplementation((rid: string) => {
+      rooms.get.mockResolvedValue(room);
+      rooms.reset.mockImplementation(async (rid: string) => {
         if (rid !== 'ROOMD') throw new Error('wrong room');
         room.revealed = false;
         room.votes = {} as any;
         delete (room as any).stats;
         return room;
       });
+      rooms.setDeck = jest.fn().mockImplementation(async (_id: string, d: string) => {
+        room.deckId = d as any;
+        return room;
+      }) as any;
       rooms.computeProgress.mockImplementation((r: Room) => {
         const eligible = (r.participants ?? []).filter((p) => p.role === 'player' || p.role === 'host');
         const votedIds = Object.keys(r.votes ?? {}).filter((id) => eligible.some((p) => p.id === id));
@@ -537,7 +545,7 @@ describe('RoomsGateway', () => {
       (gateway as any).socketRoom.set('h1', 'ROOMD');
       const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
 
-      gateway.handleDeckSet({ deckId: 'tshirt' } as any, host);
+      await gateway.handleDeckSet({ deckId: 'tshirt' } as any, host);
 
       // Deck updated on room object and votes cleared
       expect(room.deckId).toBe('tshirt');
@@ -557,16 +565,16 @@ describe('RoomsGateway', () => {
       expect(toEmit).toHaveBeenCalledWith('vote:progress', { count: 0, total: 2, votedIds: [] });
     });
 
-    it('non-host cannot set deck', () => {
+    it('non-host cannot set deck', async () => {
       const room = makeRoom('ROOMD2');
       room.participants = [
         { id: 'p1', name: 'Paula', role: 'player' },
       ];
-      rooms.get.mockReturnValue(room);
+      rooms.get.mockResolvedValue(room);
       (gateway as any).socketRoom.set('p1', 'ROOMD2');
       const client: any = { id: 'p1', join: jest.fn(), emit: jest.fn() };
 
-      gateway.handleDeckSet({ deckId: 'tshirt' } as any, client);
+      await gateway.handleDeckSet({ deckId: 'tshirt' } as any, client);
 
       expect(client.emit).toHaveBeenCalledWith(
         'room:error',
@@ -576,16 +584,16 @@ describe('RoomsGateway', () => {
       expect(toMock).not.toHaveBeenCalledWith('room:ROOMD2');
     });
 
-    it('rejects invalid payload (empty deckId)', () => {
+    it('rejects invalid payload (empty deckId)', async () => {
       const room = makeRoom('ROOMD3');
       room.participants = [
         { id: 'h1', name: 'Hannah', role: 'host' },
       ];
-      rooms.get.mockReturnValue(room);
+      rooms.get.mockResolvedValue(room);
       (gateway as any).socketRoom.set('h1', 'ROOMD3');
       const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn() };
 
-      gateway.handleDeckSet({ deckId: '' } as any, host);
+      await gateway.handleDeckSet({ deckId: '' } as any, host);
 
       expect(host.emit).toHaveBeenCalledWith(
         'room:error',
