@@ -7,6 +7,8 @@ import { PerfService } from '../perf/perf.service';
 import { LoggingService } from '../logging/logging.service';
 import { ROOMS_REPOSITORY } from './repository/tokens';
 import { InMemoryRoomsRepository } from './repository/in-memory.repository';
+import { RedisModule } from '../redis/redis.module';
+import { REDIS_CLIENT } from '../redis/redis.tokens';
 
 function provideRepository() {
   const backend = (process.env.ROOMS_BACKEND || 'memory').toLowerCase();
@@ -24,8 +26,21 @@ function provideRepository() {
 }
 
 @Module({
+  imports: [RedisModule.forRoot()],
   providers: [
-    { provide: ROOMS_REPOSITORY, useFactory: provideRepository },
+    {
+      provide: ROOMS_REPOSITORY,
+      inject: [REDIS_CLIENT],
+      useFactory: (redis: unknown) => {
+        const backend = (process.env.ROOMS_BACKEND || 'memory').toLowerCase();
+        if (backend === 'redis') {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { RedisRoomsRepository } = require('./repository/redis.repository');
+          return new RedisRoomsRepository(redis as any);
+        }
+        return new InMemoryRoomsRepository();
+      },
+    },
     RoomsService,
     TtlSweeperService,
     RoomsGateway,
