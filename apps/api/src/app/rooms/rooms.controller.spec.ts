@@ -13,15 +13,15 @@ describe('RoomsController (unit)', () => {
     controller = moduleRef.get(RoomsController);
   });
 
-  it('create() returns human-readable id', () => {
+  it('create() returns human-readable id', async () => {
     const req = { session: {} } as unknown as { session?: { uid?: string } };
-    const res = controller.create({ hostName: 'Alice' } as any, req as any);
+    const res = await controller.create({ hostName: 'Alice' } as any, req as any);
     expect(res.id).toMatch(/^[A-HJ-NP-Z]{4}-\d{4}$/);
     expect(typeof res.expiresAt).toBe('number');
   });
 
-  it('throws 400 when hostName missing', () => {
+  it('throws 400 when hostName missing', async () => {
     const req = { session: {} } as unknown as { session?: { uid?: string } };
-    expect(() => controller.create({} as any, req as any)).toThrow(BadRequestException);
+    await expect(controller.create({} as any, req as any)).rejects.toThrow(BadRequestException);
   });
 });

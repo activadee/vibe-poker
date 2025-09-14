@@ -7,7 +7,12 @@ import { LoggingService } from '../logging/logging.service';
 describe('RoomsGateway CORS', () => {
   it('afterInit applies CORS allowlist from env', async () => {
     const moduleRef = await Test.createTestingModule({
-      providers: [RoomsGateway, RoomsService, PerfService, LoggingService],
+      providers: [
+        RoomsGateway,
+        { provide: RoomsService, useValue: { get: jest.fn() } },
+        PerfService,
+        LoggingService,
+      ],
     }).compile();
 
     const gateway = moduleRef.get(RoomsGateway);

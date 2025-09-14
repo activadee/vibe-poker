@@ -9,8 +9,8 @@ describe('TtlSweeperService (FR-015)', () => {
   beforeEach(async () => {
     jest.useFakeTimers();
     rooms = {
-      removeExpired: jest.fn().mockReturnValue(0),
-      allIds: jest.fn().mockReturnValue([]),
+      removeExpired: jest.fn().mockResolvedValue(0),
+      allIds: jest.fn().mockResolvedValue([]),
     };
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -41,4 +41,3 @@ describe('TtlSweeperService (FR-015)', () => {
     expect(clearSpy).toHaveBeenCalled();
   });
 });
-

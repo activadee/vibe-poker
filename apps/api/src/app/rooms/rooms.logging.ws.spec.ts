@@ -52,14 +52,14 @@ describe('RoomsGateway logging', () => {
     gateway.server = { to };
   });
 
-  it('logs room_join with correlation and latency', () => {
+  it('logs room_join with correlation and latency', async () => {
     const room = makeRoom('ROOM1');
-    rooms.get.mockReturnValue(room);
-    rooms.addParticipant.mockReturnValue({ ...room, participants: [{ id: 's1', name: 'Alice', role: 'player' as const }] });
+    rooms.get.mockResolvedValue(room);
+    rooms.addParticipant.mockResolvedValue({ ...room, participants: [{ id: 's1', name: 'Alice', role: 'player' as const }] });
     rooms.computeProgress.mockReturnValue({ count: 0, total: 1, votedIds: [] });
 
     const client: any = { id: 's1', join: jest.fn(), emit: jest.fn(), request: { session: { uid: 'owner-1' } }, handshake: { headers: { 'x-correlation-id': 'CID-WS-1' } } };
-    gateway.handleJoin({ roomId: 'ROOM1', name: 'Alice' } as any, client);
+    await gateway.handleJoin({ roomId: 'ROOM1', name: 'Alice' } as any, client);
 
     const call = logging.event.mock.calls.find((c) => c[0] === 'room_join');
     expect(call).toBeDefined();
@@ -68,17 +68,18 @@ describe('RoomsGateway logging', () => {
     expect(call?.[2].latencyMs).toBeGreaterThanOrEqual(0);
   });
 
-  it('logs vote_reveal with correlation and latency', () => {
+  it('logs vote_reveal with correlation and latency', async () => {
     const room = makeRoom('ROOMX');
     room.participants = [{ id: 'h1', name: 'Hannah', role: 'host' }];
-    rooms.get.mockReturnValue(room);
+    rooms.get.mockResolvedValue(room);
+    rooms.setRevealed = jest.fn().mockResolvedValue({ ...room, revealed: true }) as any;
     rooms.computeProgress.mockReturnValue({ count: 0, total: 1, votedIds: [] });
 
     // Map host socket
     (gateway as any).socketRoom.set('h1', 'ROOMX');
     const host: any = { id: 'h1', join: jest.fn(), emit: jest.fn(), handshake: { headers: {} }, request: { session: {} } };
 
-    gateway.handleVoteReveal({} as any, host);
+    await gateway.handleVoteReveal({} as any, host);
 
     const call = logging.event.mock.calls.find((c) => c[0] === 'vote_reveal');
     expect(call).toBeDefined();

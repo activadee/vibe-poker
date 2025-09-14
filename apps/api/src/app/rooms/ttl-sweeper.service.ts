@@ -10,11 +10,11 @@ export class TtlSweeperService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     // Sweep once a minute
-    this.timer = setInterval(() => {
+    this.timer = setInterval(async () => {
       try {
-        const removed = this.rooms.removeExpired();
+        const removed = await this.rooms.removeExpired();
         if (removed > 0) {
-          const remaining = this.rooms.allIds().length;
+          const remaining = (await this.rooms.allIds()).length;
           this.logger.log(
             JSON.stringify({ event: 'ttl_sweep', removed, remaining })
           );

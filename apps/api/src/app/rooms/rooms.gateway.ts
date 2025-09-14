@@ -135,6 +135,23 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     } catch (e) {
       this.logger.warn(`Failed to apply Socket.IO CORS: ${String(e)}`);
     }
+
+    // Optionally enable Redis adapter for horizontal scale
+    try {
+      if ((process.env.ROOMS_BACKEND || '').toLowerCase() === 'redis' && process.env.REDIS_URL) {
+        // Lazy require to avoid adding hard dep for dev memory mode
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { createAdapter } = require('@socket.io/redis-adapter');
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const Redis = require('ioredis');
+        const pub = new Redis(process.env.REDIS_URL);
+        const sub = pub.duplicate();
+        server.adapter(createAdapter(pub, sub));
+        this.logging.event('socketio_redis_adapter_enabled');
+      }
+    } catch (e) {
+      this.logger.warn(`Failed to enable Redis adapter: ${String(e)}`);
+    }
   }
 
   private clientIp(client: Socket): string {
@@ -200,10 +217,10 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     return client.id;
   }
 
-  private getContext(client: Socket): { roomId: string; room: Room; me: Participant } | undefined {
+  private async getContext(client: Socket): Promise<{ roomId: string; room: Room; me: Participant } | undefined> {
     const roomId = this.socketRoom.get(client.id);
     if (!roomId) return undefined;
-    const room = this.rooms.get(roomId);
+    const room = await this.rooms.get(roomId);
     if (!room) return undefined;
     const me = room.participants.find((p) => p.id === client.id);
     if (!me) return undefined;
@@ -259,7 +276,7 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
   }
 
   @SubscribeMessage('room:join')
-  handleJoin(
+  async handleJoin(
     @MessageBody() payload: RoomJoinPayload,
     @ConnectedSocket() client: Socket
   ) {
@@ -269,7 +286,7 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     const roomId = payload.roomId.trim();
     const name = payload.name.trim();
 
-    const room = this.rooms.get(roomId);
+    const room = await this.rooms.get(roomId);
     if (!room) {
       const err: RoomErrorEvent = {
         code: 'invalid_room',
@@ -281,7 +298,7 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
 
     // FR-015: If room is expired, gracefully delete and inform client with 'expired' error
     if (room.expiresAt <= Date.now()) {
-      this.rooms.remove(roomId);
+      await this.rooms.remove(roomId);
       const err: RoomErrorEvent = {
         code: 'expired',
         message: 'This room has expired. Please create a new room.',
@@ -301,14 +318,14 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     type ReqWithSession = Request & { session?: { uid?: string } };
     const req = client.request as unknown as ReqWithSession;
     const sessionUid = req.session?.uid || '';
-    const ownerUid = this.rooms.getOwner(roomId) || '';
+    const ownerUid = (await this.rooms.getOwner(roomId)) || '';
     const shouldBeHost = !!sessionUid && sessionUid === ownerUid;
     const participant: Participant = {
       id: client.id,
       name,
       role: shouldBeHost ? 'host' : requestedRole === 'observer' ? 'observer' : 'player',
     };
-    const updated = this.rooms.addParticipant(roomId, participant);
+    const updated = await this.rooms.addParticipant(roomId, participant);
 
     // Broadcast state to all in room (including the joiner)
     this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(updated));
@@ -317,13 +334,13 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     this.logEvent({ event: 'room_join', room_id: roomId, name, socket_id: client.id }, client, ms);
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     const stop = this.perf.start('ws_handler.disconnect');
-    const ctx = this.getContext(client);
+    const ctx = await this.getContext(client);
     const roomId = ctx?.roomId ?? this.socketRoom.get(client.id);
     if (!roomId) return;
     this.socketRoom.delete(client.id);
-    const room = this.rooms.removeParticipant(roomId, client.id);
+    const room = await this.rooms.removeParticipant(roomId, client.id);
     if (!room) return;
     const ms = stop({ roomId, participants: room.participants.length });
     this.logEvent({ event: 'room_leave', room_id: roomId, socket_id: client.id }, client, ms);
@@ -332,14 +349,14 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
   }
 
   @SubscribeMessage('vote:cast')
-  handleVoteCast(
+  async handleVoteCast(
     @MessageBody() payload: VoteCastPayload,
     @ConnectedSocket() client: Socket
   ) {
     const stop = this.perf.start('ws_handler.vote_cast');
     if (!this.enforceLimits('vote:cast', client)) return;
     if (!this.validate(this.schemas.voteCast, payload, client)) return;
-    const ctx = this.getContext(client);
+    const ctx = await this.getContext(client);
     if (!ctx) return;
     const { roomId, room, me } = ctx;
     if (!this.isPlayer(me)) {
@@ -351,7 +368,7 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
     const value = (payload?.value ?? '').toString();
     if (!value) return; // ignore invalid
     // Persist via service (overwrites if re-cast)
-    this.rooms.castVote(roomId, client.id, value);
+    await this.rooms.castVote(roomId, client.id, value);
     // Broadcast progress only (no values) to all clients
     this.broadcastProgress(roomId, room);
     const ms = stop({ roomId });
@@ -359,14 +376,14 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
   }
 
   @SubscribeMessage('vote:reveal')
-  handleVoteReveal(
+  async handleVoteReveal(
     @MessageBody() _payload: VoteRevealPayload,
     @ConnectedSocket() client: Socket
   ) {
     const stop = this.perf.start('ws_handler.vote_reveal');
     if (!this.enforceLimits('vote:reveal', client)) return;
     if (!this.validate(this.schemas.voteReveal, _payload ?? {}, client)) return;
-    const ctx = this.getContext(client);
+    const ctx = await this.getContext(client);
     if (!ctx) return;
     const { roomId, room, me } = ctx;
     if (!this.isHost(me)) {
@@ -375,22 +392,22 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
       this.logEvent({ event: 'auth_forbidden', action: 'vote:reveal', room_id: roomId, socket_id: client.id, role: me.role }, client);
       return;
     }
-    room.revealed = true;
-    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
-    this.broadcastProgress(roomId, room);
+    const after = await this.rooms.setRevealed(roomId, true);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(after));
+    this.broadcastProgress(roomId, after);
     const ms = stop({ roomId });
     this.logEvent({ event: 'vote_reveal', room_id: roomId, socket_id: client.id }, client, ms);
   }
 
   @SubscribeMessage('vote:reset')
-  handleVoteReset(
+  async handleVoteReset(
     @MessageBody() _payload: VoteResetPayload,
     @ConnectedSocket() client: Socket
   ) {
     const stop = this.perf.start('ws_handler.vote_reset');
     if (!this.enforceLimits('vote:reset', client)) return;
     if (!this.validate(this.schemas.voteReset, _payload ?? {}, client)) return;
-    const ctx = this.getContext(client);
+    const ctx = await this.getContext(client);
     if (!ctx) return;
     const { roomId, room, me } = ctx;
     if (!this.isHost(me)) {
@@ -399,22 +416,22 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
       this.logEvent({ event: 'auth_forbidden', action: 'vote:reset', room_id: roomId, socket_id: client.id, role: me.role }, client);
       return;
     }
-    this.rooms.reset(roomId);
-    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
-    this.broadcastProgress(roomId, room);
+    const after = await this.rooms.reset(roomId);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(after));
+    this.broadcastProgress(roomId, after);
     const ms = stop({ roomId });
     this.logEvent({ event: 'vote_reset', room_id: roomId, socket_id: client.id }, client, ms);
   }
 
   @SubscribeMessage('story:set')
-  handleStorySet(
+  async handleStorySet(
     @MessageBody() payload: StorySetPayload,
     @ConnectedSocket() client: Socket
   ) {
     const stop = this.perf.start('ws_handler.story_set');
     // Story and deck updates are host-only but can be spammed; optional rate limits can be added later
     if (!this.validate(this.schemas.storySet, payload, client)) return;
-    const ctx = this.getContext(client);
+    const ctx = await this.getContext(client);
     if (!ctx) return;
     const { roomId, room, me } = ctx;
     if (!this.isHost(me)) {
@@ -441,21 +458,21 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
       client.emit('room:error', err);
       return;
     }
-    room.story = next;
-    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
-    this.broadcastProgress(roomId, room);
+    const after = await this.rooms.setStory(roomId, next);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(after));
+    this.broadcastProgress(roomId, after);
     const ms = stop({ roomId });
     this.logEvent({ event: 'story_set', room_id: roomId, socket_id: client.id }, client, ms);
   }
 
   @SubscribeMessage('deck:set')
-  handleDeckSet(
+  async handleDeckSet(
     @MessageBody() payload: DeckSetPayload,
     @ConnectedSocket() client: Socket
   ) {
     const stop = this.perf.start('ws_handler.deck_set');
     if (!this.validate(this.schemas.deckSet, payload, client)) return;
-    const ctx = this.getContext(client);
+    const ctx = await this.getContext(client);
     if (!ctx) return;
     const { roomId, room, me } = ctx;
     if (!this.isHost(me)) {
@@ -465,11 +482,11 @@ export class RoomsGateway implements OnGatewayDisconnect, OnGatewayConnection {
       return;
     }
     const deckId = payload?.deckId ?? 'fibonacci';
-    room.deckId = deckId;
+    await this.rooms.setDeck(roomId, deckId);
     // Reset round state when deck changes (votes cleared, reveal off, stats removed)
-    this.rooms.reset(roomId);
-    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(room));
-    this.broadcastProgress(roomId, room);
+    const after = await this.rooms.reset(roomId);
+    this.server.to(this.roomKey(roomId)).emit('room:state', this.safeRoom(after));
+    this.broadcastProgress(roomId, after);
     const ms = stop({ roomId, deck: deckId });
     this.logEvent({ event: 'deck_set', room_id: roomId, socket_id: client.id, deck: deckId }, client, ms);
   }

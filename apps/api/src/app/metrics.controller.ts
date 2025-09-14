@@ -7,11 +7,15 @@ export class MetricsController {
   constructor(private readonly perf: PerfService, private readonly rooms: RoomsService) {}
 
   @Get()
-  get() {
+  async get() {
     const snapshot = this.perf.snapshot();
     // Include lightweight room stats helpful during load tests
-    const roomIds = this.rooms.allIds();
-    const participantCounts = roomIds.map((id) => this.rooms.get(id)?.participants.length ?? 0);
+    const roomIds = await this.rooms.allIds();
+    const participantCounts: number[] = [];
+    for (const id of roomIds) {
+      const r = await this.rooms.get(id);
+      participantCounts.push(r?.participants.length ?? 0);
+    }
     const rooms = {
       total: roomIds.length,
       max_participants: participantCounts.length ? Math.max(...participantCounts) : 0,
@@ -20,4 +24,3 @@ export class MetricsController {
     return { ...snapshot, rooms };
   }
 }
-
