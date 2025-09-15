@@ -62,7 +62,7 @@
     "@tailwindcss/forms": "^0.5.10",
     "@types/express-session": "^1.17.7",
     "@types/jest": "^29.5.14",
-    "@types/node": "20.19.9",
+    "@types/node": "24.4.0",
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/utils": "^8.29.0",
     "angular-eslint": "^20.0.0",
