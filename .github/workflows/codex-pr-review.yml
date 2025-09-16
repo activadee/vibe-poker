@@ -1,0 +1,109 @@
+# Codex PR Review (MCP)
+#
+# Prerequisites:
+# - Secret OPENAI_API_KEY (or, alternatively, CODEX_AUTH_JSON_B64 for a restored Codex login).
+# - Optional secret GH_PAT if you prefer a fine‑grained Personal Access Token; otherwise this uses the default GITHUB_TOKEN.
+#
+# Security notes:
+# - This uses pull_request_target and intentionally does NOT check out untrusted PR code.
+# - The GitHub MCP server fetches diffs via the API and posts inline comments using the Reviews API.
+
+name: Codex PR Review (MCP)
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: AI PR Review (Codex + GitHub MCP)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
+
+      - name: Configure MCP servers for Codex
+        run: |
+          mkdir -p "$HOME/.codex"
+          cat > "$HOME/.codex/config.toml" <<'EOF'
+          # ~/.codex/config.toml
+          # Registers the GitHub MCP server (runs locally via Docker).
+          [mcp_servers.github]
+          command = "docker"
+          args = [
+            "run","-i","--rm",
+            "-e","GITHUB_PERSONAL_ACCESS_TOKEN",
+            "-e","GITHUB_TOOLSETS",
+            "ghcr.io/github/github-mcp-server"
+          ]
+          EOF
+
+      - name: (Optional) Restore Codex auth.json
+        env:
+          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
+        run: |
+          # If you prefer to authenticate Codex via auth.json instead of OPENAI_API_KEY,
+          # add a repository secret CODEX_AUTH_JSON_B64 containing base64 of ~/.codex/auth.json
+          if [ -n "${CODEX_AUTH_JSON_B64:-}" ]; then
+            mkdir -p "$HOME/.codex"
+            echo "$CODEX_AUTH_JSON_B64" | base64 -d > "$HOME/.codex/auth.json"
+            chmod 600 "$HOME/.codex/auth.json"
+          fi
+
+      - name: Run Codex review via GitHub MCP (inline comments)
+        env:
+          # Token for the GitHub MCP server:
+          # Prefer a fine-grained PAT via secrets.GH_PAT; otherwise fall back to the default workflow token.
+          GITHUB_PERSONAL_ACCESS_TOKEN: ${{ github.token }}
+          # Load only the toolsets needed for reviews:
+          GITHUB_TOOLSETS: pull_requests,repos
+          # Non-interactive CLI mode:
+          CODEX_QUIET_MODE: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PR="${{ github.event.pull_request.number }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+
+          # Build a multi-line instruction for Codex.
+          PROMPT=$(cat <<'EOT'
+          You are an experienced code reviewer.
+          Use the local MCP server named "github" to review this pull request and leave line-level inline comments.
+
+          Requirements:
+          - Do NOT execute untrusted PR code.
+          - Create a pending review, fetch the PR diff/files, and add precise inline comments.
+          - Each inline comment must pinpoint the file and exact line side/position in the current patch.
+          - Prioritize correctness, security, performance, and test coverage over style nits.
+          - Group minor nits into a single summarized note.
+          - Submit the review with a short summary.
+          - If you find blockers, submit the review as "REQUEST_CHANGES"; otherwise use "COMMENT".
+
+          Concrete steps to perform via the "github" MCP tools:
+          1) Create a pending review for the current PR.
+          2) Retrieve changed files and the unified diff.
+          3) For each substantive issue, add a line-level comment to the pending review (subjectType=line).
+          4) Submit the pending review (event=COMMENT or REQUEST_CHANGES as appropriate).
+
+          If the tool names vary, first list the available "github" tools and choose the ones that correspond to:
+          - create pending review
+          - get PR files / diff
+          - add comment to pending review (line comments)
+          - submit pending review
+          EOT
+          )
+
+          # Run Codex headlessly with the prompt above.
+          codex exec exec --full-auto "Repository: ${OWNER}/${REPO}, PR #${PR}. ${PROMPT}"
