@@ -24,6 +24,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -106,5 +110,5 @@ jobs:
           )
 
           # Run Codex headlessly with the prompt above.
-          codex exec --full-auto --yolo \
+          codex exec --full-auto \
             "Repository: ${OWNER}/${REPO}, PR #${PR}. ${PROMPT}"
