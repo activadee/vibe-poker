@@ -106,4 +106,5 @@ jobs:
           )
 
           # Run Codex headlessly with the prompt above.
-          codex exec exec --full-auto "Repository: ${OWNER}/${REPO}, PR #${PR}. ${PROMPT}"
+          codex exec --full-auto \
+            "Repository: ${OWNER}/${REPO}, PR #${PR}. ${PROMPT}"
