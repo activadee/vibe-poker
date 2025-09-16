@@ -43,6 +43,8 @@ jobs:
           # ~/.codex/config.toml
           # Registers the GitHub MCP server (runs locally via Docker).
           [mcp_servers.github]
+          transport = "stdio"
+          startup_timeout_ms = 60000
           command = "docker"
           args = [
             "run","-i","--rm",
@@ -68,11 +70,9 @@ jobs:
         env:
           # Token for the GitHub MCP server:
           # Prefer a fine-grained PAT via secrets.GH_PAT; otherwise fall back to the default workflow token.
-          GITHUB_PERSONAL_ACCESS_TOKEN: ${{ github.token }}
+          GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PAT}}
           # Load only the toolsets needed for reviews:
           GITHUB_TOOLSETS: pull_requests,repos
-          # Non-interactive CLI mode:
-          CODEX_QUIET_MODE: "1"
         shell: bash
         run: |
           set -euo pipefail
